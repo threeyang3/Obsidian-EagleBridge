@@ -14,6 +14,10 @@ This plugin includes the following functionalities:
 - Tag synchronization
 - File viewing
 - Attachment management
+- **Image auto-retry**: Eagle images that fail to load are automatically retried (up to 8 times) with cache-busting
+- **Audio/Video inline playback**: Eagle-linked media files play directly in Obsidian via native `<audio>`/`<video>` elements
+- **Mobile LAN viewing**: View Eagle-linked images and attachments from mobile Obsidian on the same LAN
+- **Vault-wide batch migration**: Upload all local attachments across the vault to Eagle, with backup, confirmation modal, and configurable options
 
 [![GitHub stars](https://img.shields.io/github/stars/zyjGraphein/Obsidian-EagleBridge?style=flat&label=Stars)](https://github.com/zyjGraphein/Obsidian-EagleBridge/stargazers)
 [![Total Downloads](https://img.shields.io/github/downloads/zyjGraphein/Obsidian-EagleBridge/total?style=flat&label=Total%20Downloads)](https://github.com/zyjGraphein/Obsidian-EagleBridge/releases)
@@ -66,6 +70,28 @@ Visit the latest release page, download `main.js`, `manifest.json`, and `style.c
 - If Eagle is not running or is not in the target path repository, you can still view images, but the context menu functions and attachment uploads to Eagle will not work.
 - When exporting notes as a PDF, images will display correctly, but other links (URLs, PDFs, MP4s) will still be clickable. However, when shared with others (outside the local environment), these links may not open.
 
+### Mobile LAN Viewing
+
+1. On desktop: go to plugin Settings → **LAN IP address** → click 🔍 to auto-detect (or enter manually, e.g., `192.168.1.100`)
+2. Sync your vault to mobile Obsidian (use any sync plugin)
+3. On mobile: ensure the device is on the same LAN as the desktop
+4. Eagle images and attachments will load from the desktop server automatically
+
+> **Note**: Mobile mode is view-only. Upload, context menus, and Eagle API operations require the desktop app.
+
+### Vault-Wide Batch Migration
+
+Upload all local attachments (images, audio, video, PDFs) from every Markdown file to Eagle in one go:
+
+1. Go to plugin Settings → **Batch migration** → configure options:
+   - **Delete original files**: Move originals to trash after successful upload
+   - **Backup attachments**: Copy all files to `.eaglebridge-backup/` before migration
+   - **Wait time**: Delay between Eagle API calls (default 2s, increase if uploads fail)
+   - **Keep temporary files**: Preserve temp copies used during upload
+2. Run command: **Upload all Markdown attachments to Eagle**
+3. Review the confirmation modal showing file count and attachment count
+4. Confirm to start. A notice shows final stats (uploaded, replaced, deleted, errors)
+
 ## Development Guide
 
 This plugin follows the structure of the [Obsidian Sample Plugin](https://github.com/obsidianmd/obsidian-sample-plugin). More details can be found there.
@@ -79,6 +105,10 @@ This plugin follows the structure of the [Obsidian Sample Plugin](https://github
 ## To-Do List
 
 - [x] Support embedded previews for various file formats (e.g., PDF, MP4, PSD, OBJ, etc.)
+- [x] Auto-retry for image loading failures
+- [x] Inline audio/video playback for Eagle links
+- [x] Mobile LAN viewing support
+- [x] Vault-wide batch migration with backup
 - [ ] Add support for macOS.
 - [ ] Support updating position when dragging.
 - [ ] When exporting, replace all attachment links and export all attachments to a folder.
