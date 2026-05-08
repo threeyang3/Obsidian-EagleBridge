@@ -9,12 +9,13 @@ import { EditorView} from '@codemirror/view';
 import { extractEagleItemIdFromUrl } from './eagleReferenceView';
 import { openDeleteEagleAttachmentModal } from './eagleDeletion';
 
-const electron = require('electron');
-const shell = electron.shell as {
-    openExternal: (target: string) => Promise<void>;
-    openPath: (target: string) => Promise<string>;
-    showItemInFolder: (fullPath: string) => void;
-};
+let shell: { openExternal: (target: string) => Promise<void>; openPath: (target: string) => Promise<string>; showItemInFolder: (fullPath: string) => void; } | null = null;
+try {
+    const electron = require('electron');
+    shell = electron.shell;
+} catch {
+    // desktop only
+}
 
 function getRevealMenuTitle(): string {
     if (process.platform === 'darwin') {
@@ -33,6 +34,10 @@ function getOtherAppsMenuTitle(): string {
 }
 
 async function openFileInDefaultApp(filePath: string): Promise<void> {
+    if (!shell) {
+        new Notice('This feature is only available on desktop');
+        return;
+    }
     const errorMessage = await shell.openPath(filePath);
     if (errorMessage) {
         throw new Error(errorMessage);
@@ -40,6 +45,10 @@ async function openFileInDefaultApp(filePath: string): Promise<void> {
 }
 
 function revealFileInSystemBrowser(filePath: string): void {
+    if (!shell) {
+        new Notice('This feature is only available on desktop');
+        return;
+    }
     shell.showItemInFolder(filePath);
 }
 
@@ -292,7 +301,9 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                 .onClick(async () => {
                     const eagleLink = `eagle://item/${id}`;
                     navigator.clipboard.writeText(eagleLink);
-                    await shell.openExternal(eagleLink);
+                    if (shell) {
+                        await shell.openExternal(eagleLink);
+                    }
                 })
         );
 

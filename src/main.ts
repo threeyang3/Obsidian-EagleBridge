@@ -8,13 +8,15 @@ import {
 	addCommandSynchronizedPageTabs,
 	addCommandSyncCurrentPageObsidianLink,
 	addCommandUploadCurrentMarkdownAttachments,
+	addCommandUploadVaultMarkdownAttachments,
 } from "./addCommand-config";
 import { existsSync } from 'fs';
 import { MyPluginSettings, DEFAULT_SETTINGS, SampleSettingTab, isAppendPageTagsMode, isImportEagleTagsMode, normalizeAttachmentTagSyncMode, normalizeUploadSettings, shouldReplacePageTagsInEagle } from './setting';
 import { handleImageClick, removeZoomedImage } from './Leftclickimage';
 import { handleLinkClick, eagleImageContextMenuCall, eagleLinkContextMenuCall, registerEscapeButton, addEagleImageMenuSourceMode, addEagleImageMenuPreviewMode, fetchImageInfo } from './menucall';
-import { isAltTextImage, isURL, isLocalHostLink} from './embed';
+import { isAltTextImage, isURL, isLocalHostLink, rewriteLocalhostUrl } from './embed';
 import { embedManager } from './embed';
+import { setupEagleImageAutoRetry } from './imageRetry';
 import { embedField } from './embed-state-field';
 import { Extension } from "@codemirror/state";
 import { registerCanvasAutoNormalize, registerCanvasDocument } from './canvasHandler';
@@ -84,6 +86,8 @@ export default class MyPlugin extends Plugin {
 				if (embedManager.shouldEmbed(image.src)) {
 					print(`MarkdownPostProcessor 找到可嵌入图像: ${image.src}`);
 					this.handleImage(image);
+					} else if (isLocalHostLink(image.src)) {
+						setupEagleImageAutoRetry(image, image.src);
 				}
 			});
 		});
@@ -95,40 +99,55 @@ export default class MyPlugin extends Plugin {
 			this.registerDocument(window.document);
 		});
 		// 在插件加载时启动服务器
-		startServer(this.settings.libraryPath, this.settings.port);
-		registerCanvasAutoNormalize(this);
+		if (Platform.isDesktopApp) {
+			startServer(this.settings.libraryPath, this.settings.port);
+			registerCanvasAutoNormalize(this);
+		}
+		if (!Platform.isDesktopApp && this.settings.lanIpAddress) {
+			this.registerMarkdownPostProcessor((el, ctx) => {
+				el.querySelectorAll('img').forEach((img) => {
+					img.src = rewriteLocalhostUrl(img.src, this.settings.lanIpAddress, this.settings.port);
+					setupEagleImageAutoRetry(img, img.src);
+				});
+				el.querySelectorAll('a.external-link').forEach((link) => {
+					(link as HTMLAnchorElement).href = rewriteLocalhostUrl((link as HTMLAnchorElement).href, this.settings.lanIpAddress, this.settings.port);
+				});
+			});
+		}
 		// 添加设置面板
 		this.addSettingTab(new SampleSettingTab(this.app, this));
 		// await this.loadSettings();
-		// 注册粘贴事件
-		this.registerEvent(
-			this.app.workspace.on('editor-paste', (clipboard: ClipboardEvent, editor: Editor) => {
-				handlePasteEvent(clipboard, editor, this.settings.port, this);
-			})
-		);
-		// 注册拖拽事件
-		this.registerEvent(
-			this.app.workspace.on('editor-drop', (event: DragEvent, editor: Editor) => {
-				handleDropEvent(event, editor, this.settings.port, this);
-			})
-		);
-		this.registerDomEvent(document, 'dragover', (event: DragEvent) => {
-			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			if (!activeView || activeView.getMode() === 'preview') {
-				return;
-			}
+		if (Platform.isDesktopApp) {
+			// 注册粘贴事件
+			this.registerEvent(
+				this.app.workspace.on('editor-paste', (clipboard: ClipboardEvent, editor: Editor) => {
+					handlePasteEvent(clipboard, editor, this.settings.port, this);
+				})
+			);
+			// 注册拖拽事件
+			this.registerEvent(
+				this.app.workspace.on('editor-drop', (event: DragEvent, editor: Editor) => {
+					handleDropEvent(event, editor, this.settings.port, this);
+				})
+			);
+			this.registerDomEvent(document, 'dragover', (event: DragEvent) => {
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (!activeView || activeView.getMode() === 'preview') {
+					return;
+				}
 
-			const target = event.target as HTMLElement | null;
-			if (!target?.closest('.cm-editor')) {
-				return;
-			}
+				const target = event.target as HTMLElement | null;
+				if (!target?.closest('.cm-editor')) {
+					return;
+				}
 
-			if (!shouldTrackMarkdownDragCursor(event, this)) {
-				return;
-			}
+				if (!shouldTrackMarkdownDragCursor(event, this)) {
+					return;
+				}
 
-			syncEditorCursorToDragEvent(activeView.editor, event);
-		}, { capture: true });
+				syncEditorCursorToDragEvent(activeView.editor, event);
+			}, { capture: true });
+		}
 		// 在插件加载时设置 DEBUG 状态
 		// console.log('Debug setting:', this.settings.debug);
 		this.registerEvent(
@@ -258,10 +277,13 @@ export default class MyPlugin extends Plugin {
 			}
 		});
 		// register all commands in addCommand function
-		addCommandSynchronizedPageTabs(this);
-		addCommandSyncCurrentPageObsidianLink(this);
-		addCommandUploadCurrentMarkdownAttachments(this);
-		registerMarkdownExportFileMenu(this);
+		if (Platform.isDesktopApp) {
+			addCommandSynchronizedPageTabs(this);
+			addCommandSyncCurrentPageObsidianLink(this);
+			addCommandUploadCurrentMarkdownAttachments(this);
+			addCommandUploadVaultMarkdownAttachments(this);
+			registerMarkdownExportFileMenu(this);
+		}
 		// 添加自定义样式，确保样式包含编辑模式特定样式
 		const style = document.createElement('style');
 		style.textContent = `
@@ -527,6 +549,9 @@ export default class MyPlugin extends Plugin {
 			
 			// 使用替换方法
 			img.parentElement.replaceChild(container, img);
+			if (embedResult.iframeEl) {
+				setupEagleImageAutoRetry(embedResult.iframeEl, src);
+			}
 			
 			
 			return container;

@@ -1,6 +1,7 @@
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import chokidar from 'chokidar';
 import { EventEmitter } from 'events';
 import { print, setDebug } from './main';
@@ -30,13 +31,35 @@ function getContentType(ext: string): string | null {
         case '.pdf':
             return 'application/pdf';
         case '.mp4':
+        case '.m4v':
             return 'video/mp4';
+        case '.mov':
+            return 'video/quicktime';
+        case '.webm':
+            return 'video/webm';
+        case '.mkv':
+            return 'video/x-matroska';
+        case '.avi':
+            return 'video/x-msvideo';
         case '.mp3':
             return 'audio/mpeg';
+        case '.m4a':
+        case '.m4b':
+            return 'audio/mp4';
+        case '.aac':
+            return 'audio/aac';
+        case '.flac':
+            return 'audio/flac';
+        case '.opus':
+            return 'audio/opus';
+        case '.oga':
+            return 'audio/ogg';
         case '.ogg':
             return 'audio/ogg';
         case '.wav':
             return 'audio/wav';
+        case '.weba':
+            return 'audio/webm';
         case '.json':
             return 'application/json';
         case '.xml':
@@ -53,10 +76,6 @@ function getContentType(ext: string): string | null {
             return 'text/css';
         case '.js':
             return 'application/javascript';
-        // case '.pptx':
-        //     return 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
-        // case '.url':
-            // return 'text/plain';
         default:
             return null;
     }
@@ -447,7 +466,7 @@ export function startServer(libraryPath: string, port: number) {
                                     return;
                                 }
 
-                                streamBinaryFile(req, res, imagePath, contentType, fileStats);
+                                streamBinaryFile(req, res, imagePath, contentType, fileStats, 'public, max-age=3600');
                             });
                         } catch (parseErr) {
                             console.error('Error parsing JSON:', parseErr);
@@ -494,9 +513,13 @@ export function startServer(libraryPath: string, port: number) {
     });
 
 
-    server.listen(port, () => {
+    server.listen(port, '0.0.0.0', () => {
         isServerRunning = true;
+        const lanIp = detectLanIp();
         print(`Server is running at http://localhost:${port}/`);
+        if (lanIp) {
+            print(`LAN access: http://${lanIp}:${port}/`);
+        }
     });
 }
 
@@ -516,6 +539,22 @@ export function stopServer() {
             print('Server stopped.');
         });
     }
+}
+
+export function detectLanIp(): string | null {
+    try {
+        const interfaces = os.networkInterfaces();
+        for (const name of Object.keys(interfaces)) {
+            for (const iface of interfaces[name] ?? []) {
+                if (iface.family === 'IPv4' && !iface.internal) {
+                    return iface.address;
+                }
+            }
+        }
+    } catch {
+        // ignore
+    }
+    return null;
 }
 
 export function getLatestDirUrl(): string | null {

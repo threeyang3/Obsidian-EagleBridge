@@ -1,5 +1,6 @@
 import { WidgetType } from "@codemirror/view";
 import { embedManager } from "./embed";
+import { setupEagleImageAutoRetry } from "./imageRetry";
 
 // 调试函数
 function debugLog(message: string, ...args: any[]) {
@@ -69,12 +70,7 @@ export class EmbedWidget extends WidgetType {
                 // 添加加载事件处理
                 if (result.iframeEl) {
                     const iframe = result.iframeEl;
-                    // 设置iframe事件处理
-                    iframe.onerror = () => {
-                        // print(`嵌入加载失败: ${this.url}`);
-                        this.showError(`加载失败: ${this.url}`);
-                    };
-
+                    setupEagleImageAutoRetry(iframe, this.url);
                     iframe.onload = () => {
                         // print(`嵌入加载成功: ${this.url}`);
                     };

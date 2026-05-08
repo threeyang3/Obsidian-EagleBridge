@@ -1,7 +1,7 @@
 import MyPlugin from './main';
 import { syncCurrentPageTags } from "./synchronizedpagetabs";
 import { syncCurrentPageObsidianLinkToEagle } from './obsidianLinkSync';
-import { uploadCurrentMarkdownAttachmentsToEagle } from './markdownAttachmentBatchUpload';
+import { uploadCurrentMarkdownAttachmentsToEagle, uploadVaultMarkdownAttachmentsToEagle } from './markdownAttachmentBatchUpload';
 
 export const addCommandSynchronizedPageTabs = (myPlugin: MyPlugin) => {
 	myPlugin.addCommand({
@@ -39,6 +39,15 @@ export const addCommandUploadCurrentMarkdownAttachments = (myPlugin: MyPlugin) =
 			}
 
 			return true;
+		},
+	});
+};
+export const addCommandUploadVaultMarkdownAttachments = (myPlugin: MyPlugin) => {
+	myPlugin.addCommand({
+		id: 'upload-vault-markdown-attachments-to-eagle',
+		name: 'Upload all Markdown attachments to Eagle',
+		callback: async () => {
+			await uploadVaultMarkdownAttachmentsToEagle(myPlugin);
 		},
 	});
 };

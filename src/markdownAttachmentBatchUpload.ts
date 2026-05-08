@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import {
 	App,
@@ -13,6 +14,10 @@ import {
 import type MyPlugin from './main';
 import { isPathInsideDirectory } from './eaglePaths';
 import { resolveFilePathToEagleLink, type ResolvedEagleLink } from './urlHandler';
+
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 const NON_ATTACHMENT_EXTENSIONS = new Set(['md', 'canvas', 'base']);
 const WIKILINK_REGEX = /^(!?)\[\[([\s\S]*?)\]\]$/;
@@ -711,5 +716,244 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
 		return true;
 	} catch {
 		return false;
+	}
+}
+
+export async function uploadVaultMarkdownAttachmentsToEagle(plugin: MyPlugin): Promise<void> {
+	if (!(plugin.app.vault.adapter instanceof FileSystemAdapter)) {
+		new Notice('该命令仅支持桌面端文件系统仓库。');
+		return;
+	}
+
+	const markdownFiles = plugin.app.vault.getMarkdownFiles();
+	const adapterBasePath = plugin.app.vault.adapter.getBasePath();
+
+	// Phase 1: analyze all files, collect potential targets
+	const allPlans: Array<{ file: TFile; plan: AttachmentBatchPlan }> = [];
+	let totalAttachmentCount = 0;
+
+	for (const file of markdownFiles) {
+		let plan: AttachmentBatchPlan;
+		try {
+			plan = await buildAttachmentBatchPlan(plugin.app, file, plugin.settings.libraryPath);
+		} catch {
+			continue;
+		}
+
+		if (plan.targets.length === 0) {
+			continue;
+		}
+
+		allPlans.push({ file, plan });
+		totalAttachmentCount += plan.targets.length;
+	}
+
+	if (allPlans.length === 0) {
+		new Notice('全库扫描完毕，未找到需要上传到 Eagle 的本地附件。');
+		return;
+	}
+
+	// Phase 2: confirmation modal
+	const confirmed = await new Promise<boolean>((resolve) => {
+		const modal = new VaultMigrationConfirmModal(plugin.app, allPlans, totalAttachmentCount, resolve);
+		modal.open();
+	});
+
+	if (!confirmed) {
+		new Notice('批量迁移已取消。');
+		return;
+	}
+
+	// Phase 3: backup if enabled
+	let backupDir = '';
+	if (plugin.settings.migrateBackup) {
+		try {
+			backupDir = await backupAttachmentFiles(plugin, allPlans, adapterBasePath);
+			new Notice(`备份完成，备份目录：${backupDir}`, 8000);
+		} catch (error) {
+			new Notice(`备份失败，已中止迁移：${error instanceof Error ? error.message : String(error)}`, 10000);
+			return;
+		}
+	}
+
+	// Phase 4: execute uploads file by file
+	let totalUploaded = 0;
+	let totalReplaced = 0;
+	let totalDeleted = 0;
+	let totalErrors = 0;
+
+	for (const { file, plan } of allPlans) {
+		try {
+			const resolvedLinks = new Map<string, ResolvedEagleLink>();
+
+			for (const target of plan.targets) {
+				try {
+					const resolvedLink = await resolveFilePathToEagleLink(target.absolutePath, plugin);
+					resolvedLinks.set(target.sourceFile.path, resolvedLink);
+					if (!target.sourceAlreadyInEagleLibrary) {
+						totalUploaded++;
+					}
+				} catch {
+					totalErrors++;
+					continue;
+				}
+
+				if (plugin.settings.migrateWaitImportSeconds > 0) {
+					await delay(plugin.settings.migrateWaitImportSeconds * 1000);
+				}
+			}
+
+			if (resolvedLinks.size === 0) {
+				continue;
+			}
+
+			const replacements = buildReplacementOperations(plan, resolvedLinks);
+			if (replacements.length === 0) {
+				continue;
+			}
+
+			try {
+				await plugin.app.vault.process(file, (currentContent) => {
+					if (currentContent !== plan.originalContent) {
+						throw new Error('SOURCE_FILE_CHANGED');
+					}
+					return applyReplacementOperations(currentContent, replacements);
+				});
+				totalReplaced += replacements.length;
+			} catch {
+				totalErrors++;
+			}
+
+			// delete originals if enabled
+			if (plugin.settings.migrateDeleteOriginal) {
+				for (const target of plan.targets) {
+					if (canDeleteOriginalAttachment(target)) {
+						try {
+							await plugin.app.vault.trash(target.sourceFile, true);
+							totalDeleted++;
+						} catch {
+							// skip deletion errors silently in batch mode
+						}
+					}
+				}
+			}
+		} catch {
+			totalErrors++;
+		}
+	}
+
+	// Phase 5: cleanup temp files if not keeping them
+	if (!plugin.settings.migrateKeepTemp) {
+		const tempDir = path.join(os.tmpdir(), 'obsidian-uploads');
+		try {
+			if (fs.existsSync(tempDir)) {
+				fs.rmSync(tempDir, { recursive: true, force: true });
+			}
+		} catch {
+			// ignore cleanup errors
+		}
+	}
+
+	new Notice(
+		`迁移完成：处理 ${allPlans.length} 个文件，上传 ${totalUploaded} 个附件，替换 ${totalReplaced} 处引用，删除 ${totalDeleted} 个原文件${totalErrors > 0 ? `，${totalErrors} 个错误` : ''}。`,
+		15000,
+	);
+}
+
+async function backupAttachmentFiles(
+	plugin: MyPlugin,
+	plans: Array<{ file: TFile; plan: AttachmentBatchPlan }>,
+	adapterBasePath: string,
+): Promise<string> {
+	const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+	const vaultRoot = plugin.app.vault.adapter instanceof FileSystemAdapter
+		? plugin.app.vault.adapter.getBasePath()
+		: adapterBasePath;
+	const backupDir = path.join(vaultRoot, '.eaglebridge-backup', timestamp);
+
+	const filesToBackup = new Set<string>();
+	for (const { plan } of plans) {
+		for (const target of plan.targets) {
+			filesToBackup.add(target.absolutePath);
+		}
+	}
+
+	for (const filePath of filesToBackup) {
+		if (!fs.existsSync(filePath)) {
+			continue;
+		}
+
+		const relativePath = path.relative(vaultRoot, filePath);
+		const destPath = path.join(backupDir, relativePath);
+		const destDir = path.dirname(destPath);
+
+		if (!fs.existsSync(destDir)) {
+			fs.mkdirSync(destDir, { recursive: true });
+		}
+
+		fs.copyFileSync(filePath, destPath);
+	}
+
+	return backupDir;
+}
+
+class VaultMigrationConfirmModal extends Modal {
+	private readonly plans: Array<{ file: TFile; plan: AttachmentBatchPlan }>;
+	private readonly totalCount: number;
+	private readonly resolve: (value: boolean) => void;
+
+	constructor(
+		app: App,
+		plans: Array<{ file: TFile; plan: AttachmentBatchPlan }>,
+		totalCount: number,
+		resolve: (value: boolean) => void,
+	) {
+		super(app);
+		this.plans = plans;
+		this.totalCount = totalCount;
+		this.resolve = resolve;
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		contentEl.createEl('h2', { text: '确认全库批量迁移' });
+		contentEl.createEl('p', {
+			text: `将扫描 ${this.plans.length} 个包含本地附件的 Markdown 文件，共 ${this.totalCount} 个附件。`,
+		});
+
+		const fileList = contentEl.createEl('details');
+		fileList.createEl('summary', { text: `查看文件列表 (${this.plans.length} 个文件)` });
+		const listEl = fileList.createEl('ul');
+		for (const { file, plan } of this.plans) {
+			const item = listEl.createEl('li');
+			item.textContent = `${file.path} (${plan.targets.length} 个附件)`;
+		}
+
+		contentEl.createEl('hr');
+
+		new Setting(contentEl)
+			.addButton((button) => {
+				button
+					.setButtonText('开始迁移')
+					.setCta()
+					.onClick(() => {
+						this.close();
+						this.resolve(true);
+					});
+			})
+			.addButton((button) => {
+				button
+					.setButtonText('取消')
+					.onClick(() => {
+						this.close();
+						this.resolve(false);
+					});
+			});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
 	}
 }

@@ -627,3 +627,18 @@ If your plugin does not need CSS, delete this file.
     gap: 10px;
     margin-top: 18px;
 }
+
+.eagle-embed-container video,
+.eagle-embed-container audio {
+    display: block;
+    width: 100%;
+}
+
+.eagle-embed-container video {
+    max-height: 500px;
+    background: #000;
+}
+
+.eagle-embed-audio {
+    padding: 8px 0;
+}

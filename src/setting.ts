@@ -1,6 +1,6 @@
-import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
+import { App, PluginSettingTab, Platform, Setting, Notice } from 'obsidian';
 import MyPlugin from './main';
-import { startServer, refreshServer, stopServer } from './server';
+import { startServer, refreshServer, stopServer, detectLanIp } from './server';
 
 export interface EagleUploadSettings {
 	enabled: boolean;
@@ -31,8 +31,13 @@ export interface MyPluginSettings {
 	libraryPaths: string[];
 	debug: boolean;
 	openInObsidian: string;
+	lanIpAddress: string;
 	markdownExportFormat: MarkdownExportFormat;
 	markdownExportDestinationPath: string;
+	migrateDeleteOriginal: boolean;
+	migrateBackup: boolean;
+	migrateWaitImportSeconds: number;
+	migrateKeepTemp: boolean;
 }
 
 export const DEFAULT_UPLOAD_SETTINGS: EagleUploadSettings = {
@@ -63,6 +68,11 @@ export const DEFAULT_SETTINGS: MyPluginSettings = {
 	openInObsidian: 'newPage',
 	markdownExportFormat: 'folder',
 	markdownExportDestinationPath: '',
+	migrateDeleteOriginal: true,
+	migrateBackup: false,
+	migrateWaitImportSeconds: 2,
+	migrateKeepTemp: false,
+	lanIpAddress: '',
 }
 
 type LegacyUploadSettings = Partial<EagleUploadSettings> & {
@@ -153,7 +163,7 @@ export class SampleSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Library Paths')
+				.setName('Library Paths')
 			.setDesc(`Enter multiple library paths for the server. Current valid path: ${this.plugin.settings.libraryPath}`)
 			.addButton(button => {
 				button.setButtonText('+')
@@ -433,6 +443,34 @@ export class SampleSettingTab extends PluginSettingTab {
 					});
 			});
 
+		if (Platform.isDesktopApp) {
+			new Setting(containerEl)
+				.setName('LAN IP address')
+				.setDesc('For mobile viewing: IP of this computer on LAN. Auto-detect or enter manually.')
+				.addText(text => text
+					.setPlaceholder('e.g. 192.168.1.100')
+					.setValue(this.plugin.settings.lanIpAddress)
+					.onChange(async (value) => {
+						this.plugin.settings.lanIpAddress = value.trim();
+						await this.plugin.saveSettings();
+					}))
+				.addExtraButton(button => {
+					button.setIcon('search')
+						.setTooltip('Auto-detect')
+						.onClick(async () => {
+							const ip = detectLanIp();
+							if (ip) {
+								this.plugin.settings.lanIpAddress = ip;
+								await this.plugin.saveSettings();
+								this.display();
+								new Notice('LAN IP set to ' + ip);
+							} else {
+								new Notice('Could not detect LAN IP');
+							}
+						});
+					});
+			}
+
 		new Setting(containerEl)
 			.setName('Refresh Server')
 			.setDesc('Refresh the server with the new settings')
@@ -451,6 +489,55 @@ export class SampleSettingTab extends PluginSettingTab {
 					this.plugin.settings.debug = value;
 					await this.plugin.saveSettings();
 				}));
+
+		const migrationPanel = containerEl.createDiv({ cls: 'eagle-migration-panel' });
+		migrationPanel.createEl('h3', { text: 'Batch migration' });
+
+		new Setting(migrationPanel)
+			.setName('Delete original files after migration')
+			.setDesc('When enabled, original local attachments are moved to trash after successful upload to Eagle.')
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.migrateDeleteOriginal)
+					.onChange(async (value) => {
+						this.plugin.settings.migrateDeleteOriginal = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(migrationPanel)
+			.setName('Backup attachments before migration')
+			.setDesc('Copy all attachment files to .eaglebridge-backup/ before uploading.')
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.migrateBackup)
+					.onChange(async (value) => {
+						this.plugin.settings.migrateBackup = value;
+						await this.plugin.saveSettings();
+					});
+			});
+
+		new Setting(migrationPanel)
+			.setName('Wait time between uploads (seconds)')
+			.setDesc('Delay in seconds between each Eagle import to avoid overwhelming the API.')
+			.addSlider((slider) => {
+				slider.setLimits(0, 10, 1);
+				slider.setValue(this.plugin.settings.migrateWaitImportSeconds);
+				slider.onChange(async (value) => {
+					this.plugin.settings.migrateWaitImportSeconds = value;
+					await this.plugin.saveSettings();
+				});
+				slider.setDynamicTooltip();
+			});
+
+		new Setting(migrationPanel)
+			.setName('Keep temporary upload files')
+			.setDesc('When enabled, temporary copies of files used for Eagle upload are not cleaned up.')
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.migrateKeepTemp)
+					.onChange(async (value) => {
+						this.plugin.settings.migrateKeepTemp = value;
+						await this.plugin.saveSettings();
+					});
+			});
 			
 	}
 }

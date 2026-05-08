@@ -9,7 +9,12 @@ import { print } from './main';
 import { getEagleLibraryItemPath, isPathInsideDirectory } from './eaglePaths';
 import { getCurrentPageTags } from './synchronizedpagetabs';
 
-const electron = require('electron');
+let electron: any = null;
+try {
+    electron = require('electron');
+} catch {
+    // desktop only
+}
 const IMAGE_EXTENSIONS = new Set([
     '.png',
     '.jpg',
@@ -20,6 +25,19 @@ const IMAGE_EXTENSIONS = new Set([
     '.avif',
     '.bmp',
     '.ico',
+]);
+const AUDIO_EXTENSIONS = new Set([
+    '.mp3',
+    '.ogg',
+    '.wav',
+    '.flac',
+    '.aac',
+    '.m4a',
+    '.m4b',
+    '.wma',
+    '.opus',
+    '.weba',
+    '.oga',
 ]);
 const VIDEO_EXTENSIONS = new Set([
     '.mp4',
@@ -43,9 +61,14 @@ export interface ResolvedEagleLink {
     url: string;
     fileName: string;
     isImage: boolean;
+    isAudio?: boolean;
+    isVideo?: boolean;
 }
 
 export function getNativeTransferFilePath(file: File): string | null {
+    if (!electron) {
+        return null;
+    }
     const filePath = electron.webUtils.getPathForFile(file);
     return typeof filePath === 'string' && filePath.length > 0 ? filePath : null;
 }
@@ -255,10 +278,14 @@ function buildLibraryLink(filePath: string, pluginInstance: MyPlugin): ResolvedE
         throw new Error('NON_EAGLE_FILE');
     }
 
+    const ext = path.extname(filePath).toLowerCase();
+
     return {
         url: `http://localhost:${pluginInstance.settings.port}/${itemPath}`,
         fileName: path.basename(filePath),
         isImage: isImageExtension(filePath),
+        isAudio: AUDIO_EXTENSIONS.has(ext),
+        isVideo: VIDEO_EXTENSIONS.has(ext),
     };
 }
 
@@ -288,12 +315,21 @@ async function fetchUploadedItemFileName(latestDirUrl: string): Promise<string |
 }
 
 export function createMarkdownLink(link: ResolvedEagleLink, imageSize: number | undefined): string {
-    if (!link.isImage) {
-        return `[${link.fileName}](${link.url})`;
-    }
+	const ext = path.extname(link.fileName).toLowerCase();
+	const isMedia = link.isImage || AUDIO_EXTENSIONS.has(ext) || VIDEO_EXTENSIONS.has(ext);
 
-    const sizeSuffix = imageSize ? `|${imageSize}` : '';
-    return `![${link.fileName}${sizeSuffix}](${link.url})`;
+	if (!isMedia) {
+		return `[${link.fileName}](${link.url})`;
+	}
+
+	let mediaUrl = link.url;
+	if (!link.isImage && (AUDIO_EXTENSIONS.has(ext) || VIDEO_EXTENSIONS.has(ext))) {
+		const sep = mediaUrl.includes('?') ? '&' : '?';
+		mediaUrl = `${mediaUrl}${sep}eb_ext=${encodeURIComponent(ext)}`;
+	}
+
+	const sizeSuffix = link.isImage && imageSize ? `|${imageSize}` : '';
+	return `![${link.fileName}${sizeSuffix}](${mediaUrl})`;
 }
 
 export async function getTransferFilePath(file: File): Promise<string> {
@@ -321,11 +357,14 @@ export async function resolveFilePathToEagleLink(filePath: string, pluginInstanc
     const nextUrlPromise = waitForNextUrlUpdate();
     await uploadByClipboard(filePath, pluginInstance);
     const latestDirUrl = await nextUrlPromise;
+    const ext = path.extname(filePath).toLowerCase();
 
     return {
         url: latestDirUrl,
         fileName: path.basename(filePath),
         isImage: isImageExtension(filePath),
+        isAudio: AUDIO_EXTENSIONS.has(ext),
+        isVideo: VIDEO_EXTENSIONS.has(ext),
     };
 }
 
@@ -334,11 +373,15 @@ export async function resolveUrlToEagleLink(url: string, pluginInstance: MyPlugi
     await uploadByUrl(url, pluginInstance);
     const latestDirUrl = await nextUrlPromise;
     const fileName = await fetchUploadedItemFileName(latestDirUrl);
+    const resolvedFileName = fileName || url;
+    const ext = path.extname(resolvedFileName).toLowerCase();
 
     return {
         url: latestDirUrl,
-        fileName: fileName || url,
+        fileName: resolvedFileName,
         isImage: fileName ? isImageExtension(fileName) : false,
+        isAudio: AUDIO_EXTENSIONS.has(ext),
+        isVideo: VIDEO_EXTENSIONS.has(ext),
     };
 }
 
