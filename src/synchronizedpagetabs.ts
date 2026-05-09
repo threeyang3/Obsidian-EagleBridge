@@ -1,6 +1,7 @@
 import { App, Notice, TFile } from 'obsidian';
 import { MyPluginSettings } from './setting';
 import { print } from './main';
+import { t } from './i18n';
 
 const EAGLE_ITEM_INFO_URL_REGEX = /http:\/\/localhost:\d+\/images\/([^/\s]+)\.info/gi;
 const EAGLE_API_BASE_URL = 'http://localhost:41595/api/item';
@@ -34,7 +35,7 @@ export async function syncCurrentPageTags(app: App, settings: MyPluginSettings, 
 	const activeFile = app.workspace.getActiveFile();
 	if (!activeFile) {
 		if (options.notify !== false) {
-			new Notice('No active file found.');
+			new Notice(t('tagSync.noActiveFile'));
 		}
 		return null;
 	}
@@ -61,7 +62,7 @@ export async function syncTagsToItemIds(
 		const strategy = options.strategy ?? 'append';
 		if (itemIds.length === 0) {
 			if (options.notify !== false) {
-				new Notice('No Eagle items found in the current page.');
+				new Notice(t('tagSync.noEagleItems'));
 			}
 
 			return {
@@ -90,14 +91,14 @@ export async function syncTagsToItemIds(
 			if (updatedCount > 0) {
 				new Notice(
 					strategy === 'replace'
-						? `Aligned current page tags to ${updatedCount} Eagle item(s).`
-						: `Appended current page tags to ${updatedCount} Eagle item(s).`
+						? t('tagSync.aligned', { count: updatedCount })
+						: t('tagSync.appended', { count: updatedCount })
 				);
 			} else {
 				new Notice(
 					strategy === 'replace'
-						? 'Current page tags are already aligned.'
-						: 'Current page tags are already appended.'
+						? t('tagSync.alreadyAligned')
+						: t('tagSync.alreadyAppended')
 				);
 			}
 		}
@@ -110,7 +111,7 @@ export async function syncTagsToItemIds(
 	} catch (error) {
 		print('Error syncing page tags to Eagle:', error);
 		if (options.notify !== false) {
-			new Notice('Error syncing page tags to Eagle. Check console for details.');
+			new Notice(t('tagSync.error'));
 		}
 		throw error;
 	}

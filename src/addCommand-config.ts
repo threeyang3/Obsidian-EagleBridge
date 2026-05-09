@@ -2,11 +2,12 @@ import MyPlugin from './main';
 import { syncCurrentPageTags } from "./synchronizedpagetabs";
 import { syncCurrentPageObsidianLinkToEagle } from './obsidianLinkSync';
 import { uploadCurrentMarkdownAttachmentsToEagle, uploadVaultMarkdownAttachmentsToEagle } from './markdownAttachmentBatchUpload';
+import { t } from './i18n';
 
 export const addCommandSynchronizedPageTabs = (myPlugin: MyPlugin) => {
 	myPlugin.addCommand({
 		id: "synchronized-page-tabs",
-		name: "Append current page tags to Eagle",
+		name: t('cmd.syncPageTags'),
 		callback: async () => {
 			await syncCurrentPageTags(myPlugin.app, myPlugin.settings, { notify: true });
 		},
@@ -16,7 +17,7 @@ export const addCommandSynchronizedPageTabs = (myPlugin: MyPlugin) => {
 export const addCommandSyncCurrentPageObsidianLink = (myPlugin: MyPlugin) => {
 	myPlugin.addCommand({
 		id: "sync-current-page-obsidian-link-to-eagle",
-		name: "Send current page Obsidian link to Eagle",
+		name: t('cmd.syncObsidianLink'),
 		callback: async () => {
 			await syncCurrentPageObsidianLinkToEagle(myPlugin.app, myPlugin.settings);
 		},
@@ -26,7 +27,7 @@ export const addCommandSyncCurrentPageObsidianLink = (myPlugin: MyPlugin) => {
 export const addCommandUploadCurrentMarkdownAttachments = (myPlugin: MyPlugin) => {
 	myPlugin.addCommand({
 		id: 'upload-current-markdown-attachments-to-eagle',
-		name: 'Upload current Markdown attachments to Eagle',
+		name: t('cmd.uploadCurrent'),
 		checkCallback: (checking: boolean) => {
 			const activeFile = myPlugin.app.workspace.getActiveFile();
 			const canRun = activeFile?.extension === 'md';
@@ -45,7 +46,7 @@ export const addCommandUploadCurrentMarkdownAttachments = (myPlugin: MyPlugin) =
 export const addCommandUploadVaultMarkdownAttachments = (myPlugin: MyPlugin) => {
 	myPlugin.addCommand({
 		id: 'upload-vault-markdown-attachments-to-eagle',
-		name: 'Upload all Markdown attachments to Eagle',
+		name: t('cmd.uploadVault'),
 		callback: async () => {
 			await uploadVaultMarkdownAttachmentsToEagle(myPlugin);
 		},

@@ -9,6 +9,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run version` — Bump version in manifest.json and versions.json
 - ESLint is configured via `.eslintrc` (TypeScript-eslint based)
 
+## Release
+
+每次发布 GitHub Release 时，必须附带以下 3 个 Obsidian 插件文件作为 assets：
+- `main.js` — 编译后的插件代码
+- `manifest.json` — 插件元数据（id, name, version 等）
+- `styles.css` — 插件样式
+
+发布流程：
+1. `npm run version` 更新版本号
+2. `npm run build` 构建生产版本
+3. 创建 Release 并上传上述 3 个文件
+
 ## Architecture Overview
 
 Obsidian plugin that integrates with Eagle (digital asset manager). Communication between Obsidian and Eagle happens through two local HTTP endpoints:

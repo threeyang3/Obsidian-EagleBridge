@@ -4,6 +4,7 @@ import * as path from 'path';
 import { App, ItemView, Notice, TFile, ViewStateResult, WorkspaceLeaf, setIcon } from 'obsidian';
 import MyPlugin from './main';
 import { openDeleteEagleAttachmentModal } from './eagleDeletion';
+import { t } from './i18n';
 
 const electron = require('electron');
 const shell = electron.shell as {
@@ -575,7 +576,7 @@ export class EagleReferenceView extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return 'Eagle 引用视图';
+		return t('eagleRef.viewTitle');
 	}
 
 	getIcon(): string {
@@ -674,24 +675,24 @@ export class EagleReferenceView extends ItemView {
 
 		const toolbarEl = this.contentEl.createDiv({ cls: 'eagle-ref-toolbar' });
 		const titleGroupEl = toolbarEl.createDiv({ cls: 'eagle-ref-toolbar-group' });
-		titleGroupEl.createDiv({ cls: 'eagle-ref-title', text: 'Eagle 引用视图' });
+		titleGroupEl.createDiv({ cls: 'eagle-ref-title', text: t('eagleRef.viewTitle') });
 		this.statsEl = titleGroupEl.createDiv({ cls: 'eagle-ref-stats' });
 
 		const actionsEl = toolbarEl.createDiv({ cls: 'eagle-ref-toolbar-actions' });
 		const focusCurrentFileButton = actionsEl.createEl('button', {
 			cls: 'clickable-icon eagle-ref-toolbar-button',
-			attr: { 'aria-label': '聚焦当前文件中的 Eagle 附件' },
+			attr: { 'aria-label': t('eagleRef.focusCurrentFile') },
 		});
 		setIcon(focusCurrentFileButton, 'crosshair');
 		focusCurrentFileButton.addEventListener('click', () => {
 			if (!this.focusFirstItemInActiveFile()) {
-				new Notice('当前文件没有 Eagle 附件引用。');
+				new Notice(t('eagleRef.noEagleInFile'));
 			}
 		});
 
 		const refreshButton = actionsEl.createEl('button', {
 			cls: 'clickable-icon eagle-ref-toolbar-button',
-			attr: { 'aria-label': '刷新 Eagle 引用索引' },
+			attr: { 'aria-label': t('eagleRef.refreshIndex') },
 		});
 		setIcon(refreshButton, 'refresh-cw');
 		refreshButton.addEventListener('click', () => {
@@ -703,7 +704,7 @@ export class EagleReferenceView extends ItemView {
 		this.searchInputEl = searchRowEl.createEl('input', {
 			cls: 'eagle-ref-search-input',
 			type: 'search',
-			placeholder: '搜索附件名、ID、文件名或路径',
+			placeholder: t('eagleRef.searchPlaceholder'),
 		});
 		this.searchInputEl.value = this.searchTerm;
 		this.searchInputEl.addEventListener('input', () => {
@@ -716,7 +717,7 @@ export class EagleReferenceView extends ItemView {
 		const scopeGroupEl = searchRowEl.createDiv({ cls: 'eagle-ref-scope-group' });
 		this.scopeCurrentButtonEl = scopeGroupEl.createEl('button', {
 			cls: 'eagle-ref-scope-button',
-			text: '当前文件',
+			text: t('eagleRef.scopeCurrent'),
 		});
 		this.scopeCurrentButtonEl.addEventListener('click', () => {
 			this.searchScope = 'current';
@@ -727,7 +728,7 @@ export class EagleReferenceView extends ItemView {
 
 		this.scopeAllButtonEl = scopeGroupEl.createEl('button', {
 			cls: 'eagle-ref-scope-button',
-			text: '全部 Eagle',
+			text: t('eagleRef.scopeAll'),
 		});
 		this.scopeAllButtonEl.addEventListener('click', () => {
 			this.searchScope = 'all';
@@ -738,7 +739,7 @@ export class EagleReferenceView extends ItemView {
 
 		searchCardEl.createDiv({
 			cls: 'eagle-ref-search-hint',
-			text: '支持仅检索当前文件，或检索全库 Eagle 附件；下方显示当前文件中的 Eagle 附件或检索结果。',
+			text: t('eagleRef.searchHint'),
 		});
 
 		const pickerCardEl = this.contentEl.createDiv({ cls: 'eagle-ref-card eagle-ref-picker-card' });
@@ -764,11 +765,11 @@ export class EagleReferenceView extends ItemView {
 		}
 
 		if (this.loading && this.snapshot.scannedAt === 0) {
-			this.statsEl.setText('正在扫描 Markdown / Canvas 中的 Eagle 引用...');
+			this.statsEl.setText(t('eagleRef.scanning'));
 			return;
 		}
 
-		this.statsEl.setText(`已索引 ${this.snapshot.items.length} 个 Eagle 附件，来自 ${this.snapshot.fileToItemIds.size} 个文件。`);
+		this.statsEl.setText(t('eagleRef.indexed', { itemCount: this.snapshot.items.length, fileCount: this.snapshot.fileToItemIds.size }));
 	}
 
 	private updateScopeButtons(): void {
@@ -897,21 +898,21 @@ export class EagleReferenceView extends ItemView {
 		const activeFile = this.getActiveFile();
 		const pickerItems = this.getPickerItems();
 
-		this.pickerTitleEl.setText('当前文件中的 Eagle 附件或检索结果');
+		this.pickerTitleEl.setText(t('eagleRef.pickerTitle'));
 		if (this.searchTerm) {
 			this.pickerMetaEl.setText(
 				this.searchScope === 'all'
-					? `全库检索，共 ${pickerItems.length} 个结果`
-					: `当前文件检索，共 ${pickerItems.length} 个结果`,
+					? t('eagleRef.searchResultAll', { count: pickerItems.length })
+					: t('eagleRef.searchResultCurrent', { count: pickerItems.length }),
 			);
 		} else {
-			this.pickerMetaEl.setText(activeFile ? activeFile.name : '当前没有打开 Markdown / Canvas 文件');
+			this.pickerMetaEl.setText(activeFile ? activeFile.name : t('eagleRef.noFileOpened'));
 		}
 
 		if (!activeFile && !this.searchTerm) {
 			this.pickerChipsEl.createDiv({
 				cls: 'eagle-ref-empty',
-				text: '打开一个 Markdown 或 Canvas 文件后，这里会列出其中引用的 Eagle 附件。',
+				text: t('eagleRef.openFileHint'),
 			});
 			return;
 		}
@@ -919,7 +920,7 @@ export class EagleReferenceView extends ItemView {
 		if (this.searchScope === 'all' && !this.searchTerm && pickerItems.length === 0) {
 			this.pickerChipsEl.createDiv({
 				cls: 'eagle-ref-empty',
-				text: '输入关键词后可在全部 Eagle 附件中检索。',
+				text: t('eagleRef.inputKeywordHint'),
 			});
 			return;
 		}
@@ -927,7 +928,7 @@ export class EagleReferenceView extends ItemView {
 		if (pickerItems.length === 0) {
 			this.pickerChipsEl.createDiv({
 				cls: 'eagle-ref-empty',
-				text: this.searchTerm ? '没有匹配的 Eagle 附件。' : '当前文件没有 Eagle 附件引用。',
+				text: this.searchTerm ? t('eagleRef.noMatch') : t('eagleRef.noEagleInCurrentFile'),
 			});
 			return;
 		}
@@ -957,7 +958,7 @@ export class EagleReferenceView extends ItemView {
 		if (!selectedItem) {
 			this.detailsEl.createDiv({
 				cls: 'eagle-ref-empty eagle-ref-details-empty',
-				text: '从上方附件列表中选择一个 Eagle 附件，下面会显示它的详细信息与引用文件。',
+				text: t('eagleRef.selectItemHint'),
 			});
 			return;
 		}
@@ -971,31 +972,31 @@ export class EagleReferenceView extends ItemView {
 		summaryTextEl.createDiv({ cls: 'eagle-ref-item-id', text: selectedItem.itemId });
 		summaryTextEl.createDiv({
 			cls: 'eagle-ref-summary-meta',
-			text: `被 ${selectedItem.referenceCount} 个文件引用，共出现 ${selectedItem.mentionCount} 次。`,
+			text: t('eagleRef.refSummary', { refCount: selectedItem.referenceCount, mentionCount: selectedItem.mentionCount }),
 		});
 
 		const summaryActionsEl = summaryHeaderEl.createDiv({ cls: 'eagle-ref-summary-actions' });
-		const openInEagleButton = summaryActionsEl.createEl('button', { cls: 'mod-cta', text: '在 Eagle 中打开' });
+		const openInEagleButton = summaryActionsEl.createEl('button', { cls: 'mod-cta', text: t('eagleRef.openInEagle') });
 		openInEagleButton.addEventListener('click', () => {
 			void shell.openExternal(`eagle://item/${selectedItem.itemId}`);
 		});
 
-		const openInObsidianButton = summaryActionsEl.createEl('button', { text: '在 Ob 中打开' });
+		const openInObsidianButton = summaryActionsEl.createEl('button', { text: t('eagleRef.openInObsidian') });
 		openInObsidianButton.addEventListener('click', () => {
 			void openItemInObsidian(this.plugin, selectedItem.itemId);
 		});
 
-		const openDefaultButton = summaryActionsEl.createEl('button', { text: '默认打开' });
+		const openDefaultButton = summaryActionsEl.createEl('button', { text: t('eagleRef.openDefault') });
 		openDefaultButton.addEventListener('click', () => {
 			void this.openSelectedItemFile('default');
 		});
 
-		const openOtherButton = summaryActionsEl.createEl('button', { text: '其他应用' });
+		const openOtherButton = summaryActionsEl.createEl('button', { text: t('eagleRef.openOther') });
 		openOtherButton.addEventListener('click', () => {
 			void this.openSelectedItemFile('other');
 		});
 
-		const deleteButton = summaryActionsEl.createEl('button', { cls: 'mod-warning', text: '删除附件' });
+		const deleteButton = summaryActionsEl.createEl('button', { cls: 'mod-warning', text: t('eagleRef.deleteAttachment') });
 		deleteButton.addEventListener('click', () => {
 			openDeleteEagleAttachmentModal({
 				plugin: this.plugin,
@@ -1013,30 +1014,30 @@ export class EagleReferenceView extends ItemView {
 
 		const detailBodyEl = summaryCardEl.createDiv({ cls: 'eagle-ref-detail-body' });
 		if (this.detailsLoading && !this.itemDraft) {
-			detailBodyEl.createDiv({ cls: 'eagle-ref-empty', text: '正在读取 Eagle 条目详情...' });
+			detailBodyEl.createDiv({ cls: 'eagle-ref-empty', text: t('eagleRef.loadingDetails') });
 		} else if (this.detailsError) {
 			detailBodyEl.createDiv({ cls: 'eagle-ref-empty', text: this.detailsError });
 		} else {
 			const detailGridEl = detailBodyEl.createDiv({ cls: 'eagle-ref-detail-grid' });
 			this.renderReadOnlyField(
 				detailGridEl,
-				'名称',
+				t('eagleRef.fieldName'),
 				this.itemDetails ? `${this.itemDetails.name}${this.itemDetails.ext}` : selectedItem.displayName,
 			);
-			this.renderReadOnlyField(detailGridEl, '源文件 ID', selectedItem.itemId);
-			this.renderEditableField(detailGridEl, 'Annotation', 'textarea', this.itemDraft?.annotation ?? '', (value) => {
+			this.renderReadOnlyField(detailGridEl, t('eagleRef.fieldItemId'), selectedItem.itemId);
+			this.renderEditableField(detailGridEl, t('eagleRef.fieldAnnotation'), 'textarea', this.itemDraft?.annotation ?? '', (value) => {
 				if (this.itemDraft) {
 					this.itemDraft.annotation = value;
 				}
 			});
-			this.renderEditableField(detailGridEl, 'URL', 'input', this.itemDraft?.url ?? '', (value) => {
+			this.renderEditableField(detailGridEl, t('eagleRef.fieldUrl'), 'input', this.itemDraft?.url ?? '', (value) => {
 				if (this.itemDraft) {
 					this.itemDraft.url = value;
 				}
 			});
 			this.renderEditableField(
 				detailGridEl,
-				'Tags',
+				t('eagleRef.fieldTags'),
 				'input',
 				this.itemDraft?.tags ?? '',
 				(value) => {
@@ -1044,31 +1045,31 @@ export class EagleReferenceView extends ItemView {
 						this.itemDraft.tags = value;
 					}
 				},
-				'多个标签请用逗号分隔',
+				t('eagleRef.tagsHint'),
 			);
 		}
 
 		const detailActionBarEl = summaryCardEl.createDiv({ cls: 'eagle-ref-detail-actions' });
-		const saveButton = detailActionBarEl.createEl('button', { cls: 'mod-cta', text: '保存到 Eagle' });
+		const saveButton = detailActionBarEl.createEl('button', { cls: 'mod-cta', text: t('eagleRef.saveToEagle') });
 		saveButton.disabled = !this.itemDraft || this.detailsLoading;
 		saveButton.addEventListener('click', () => {
 			void this.saveItemDraft();
 		});
 
-		const reloadButton = detailActionBarEl.createEl('button', { text: '重新读取' });
+		const reloadButton = detailActionBarEl.createEl('button', { text: t('eagleRef.reload') });
 		reloadButton.addEventListener('click', () => {
 			void this.syncSelectedItemDetails(true);
 		});
 
 		if (this.itemDetails?.url) {
-			const openUrlButton = detailActionBarEl.createEl('button', { text: '打开条目 URL' });
+			const openUrlButton = detailActionBarEl.createEl('button', { text: t('eagleRef.openItemUrl') });
 			openUrlButton.addEventListener('click', () => {
 				window.open(this.itemDetails?.url ?? '', '_blank');
 			});
 		}
 
 		const fileListCardEl = this.detailsEl.createDiv({ cls: 'eagle-ref-card' });
-		fileListCardEl.createDiv({ cls: 'eagle-ref-section-title', text: '引用文件' });
+		fileListCardEl.createDiv({ cls: 'eagle-ref-section-title', text: t('eagleRef.refFiles') });
 		const fileListEl = fileListCardEl.createDiv({ cls: 'eagle-ref-file-list' });
 		const activeFilePath = this.getActiveFile()?.path ?? '';
 
@@ -1175,7 +1176,7 @@ export class EagleReferenceView extends ItemView {
 
 			if (!liveInfo) {
 				this.detailsLoading = false;
-				this.detailsError = '无法从 Eagle 读取该附件的实时详情，请确认 Eagle 正在运行。';
+				this.detailsError = t('eagleRef.cannotReadLiveDetail');
 				this.renderDetails();
 				return;
 			}
@@ -1195,7 +1196,7 @@ export class EagleReferenceView extends ItemView {
 			}
 
 			this.detailsLoading = false;
-			this.detailsError = '读取 Eagle 实时详情失败。';
+			this.detailsError = t('eagleRef.liveDetailFailed');
 			this.renderDetails();
 		}
 	}
@@ -1207,11 +1208,11 @@ export class EagleReferenceView extends ItemView {
 
 		const saved = await updateLiveItemInfo(this.selectedItemId, this.itemDraft);
 		if (!saved) {
-			new Notice('保存到 Eagle 失败。');
+			new Notice(t('eagleRef.saveFailed'));
 			return;
 		}
 
-		new Notice('已保存到 Eagle。');
+		new Notice(t('eagleRef.saved'));
 		await this.syncSelectedItemDetails(true);
 	}
 
@@ -1223,14 +1224,14 @@ export class EagleReferenceView extends ItemView {
 
 		const details = this.itemDetails ?? await fetchLiveItemInfo(selectedItem);
 		if (!details) {
-			new Notice('无法读取 Eagle 文件路径。');
+			new Notice(t('eagleRef.cannotReadFilePath'));
 			return;
 		}
 
 		this.itemDetails = details;
 		const filePath = resolveLocalFilePath(this.plugin, details);
 		if (!filePath || !fs.existsSync(filePath)) {
-			new Notice('找不到本地源文件，请确认 Eagle 库路径设置正确。');
+			new Notice(t('eagleRef.localFileNotFound'));
 			return;
 		}
 
@@ -1241,7 +1242,7 @@ export class EagleReferenceView extends ItemView {
 				await openFileInOtherApps(filePath);
 			}
 		} catch {
-			new Notice('打开文件失败。');
+			new Notice(t('eagleRef.openFileFailed'));
 		}
 	}
 

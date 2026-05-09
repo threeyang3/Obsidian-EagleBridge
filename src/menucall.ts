@@ -8,6 +8,7 @@ import { existsSync } from 'fs';
 import { EditorView} from '@codemirror/view';
 import { extractEagleItemIdFromUrl } from './eagleReferenceView';
 import { openDeleteEagleAttachmentModal } from './eagleDeletion';
+import { t } from './i18n';
 
 let shell: { openExternal: (target: string) => Promise<void>; openPath: (target: string) => Promise<string>; showItemInFolder: (fullPath: string) => void; } | null = null;
 try {
@@ -19,23 +20,23 @@ try {
 
 function getRevealMenuTitle(): string {
     if (process.platform === 'darwin') {
-        return 'Reveal in Finder';
+        return t('menu.openOtherApps.macos');
     }
 
     if (process.platform === 'win32') {
-        return 'Show in File Explorer';
+        return t('menu.openOtherApps.windows');
     }
 
-    return 'Reveal in file manager';
+    return t('menu.openOtherApps.linux');
 }
 
 function getOtherAppsMenuTitle(): string {
-    return process.platform === 'win32' ? 'Open in other apps' : getRevealMenuTitle();
+    return process.platform === 'win32' ? t('menu.openOtherApps.windows') : getRevealMenuTitle();
 }
 
 async function openFileInDefaultApp(filePath: string): Promise<void> {
     if (!shell) {
-        new Notice('This feature is only available on desktop');
+        new Notice(t('menu.desktopOnly'));
         return;
     }
     const errorMessage = await shell.openPath(filePath);
@@ -46,7 +47,7 @@ async function openFileInDefaultApp(filePath: string): Promise<void> {
 
 function revealFileInSystemBrowser(filePath: string): void {
     if (!shell) {
-        new Notice('This feature is only available on desktop');
+        new Notice(t('menu.desktopOnly'));
         return;
     }
     shell.showItemInFolder(filePath);
@@ -94,7 +95,7 @@ async function openDeleteAttachmentDialog(
 ) {
     const itemId = extractEagleItemIdFromUrl(url);
     if (!itemId) {
-        new Notice('无法识别当前 Eagle 附件。');
+        new Notice(t('menu.cannotIdentifyAttachment'));
         return;
     }
 
@@ -105,7 +106,7 @@ async function openDeleteAttachmentDialog(
         item = rebuiltSnapshot.itemsById.get(itemId);
     }
     if (!item) {
-        new Notice('未在引用索引中找到该 Eagle 附件。请先刷新引用索引后再试。');
+        new Notice(t('menu.notFoundInIndex'));
         return;
     }
 
@@ -258,7 +259,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
         menu.addItem((item: MenuItem) =>
             item
                 .setIcon("file-symlink")
-                .setTitle("Open in obsidian")
+                .setTitle(t('menu.openInObsidian'))
                 .onClick(async (event: MouseEvent) => {
                     // 根据设置决定如何打开链接
                     const openMethod = plugin.settings.openInObsidian || 'newPage';
@@ -297,7 +298,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
         menu.addItem((item: MenuItem) =>
             item
                 .setIcon("file-symlink")
-                .setTitle("Open in eagle")
+                .setTitle(t('menu.openInEagle'))
                 .onClick(async () => {
                     const eagleLink = `eagle://item/${id}`;
                     navigator.clipboard.writeText(eagleLink);
@@ -310,7 +311,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
         menu.addItem((item: MenuItem) =>
             item
                 .setIcon("network")
-                .setTitle("Show Eagle references")
+                .setTitle(t('menu.showReferences'))
                 .onClick(async () => {
                     const itemId = extractEagleItemIdFromUrl(oburl);
                     await plugin.openEagleReferenceView(itemId);
@@ -320,7 +321,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
         menu.addItem((item: MenuItem) =>
             item
                 .setIcon("square-arrow-out-up-right")
-                .setTitle("Open in the default app")
+                .setTitle(t('menu.openDefaultApp'))
                 .onClick(async () => {
                     const libraryPath = plugin.settings.libraryPath;
                     const localFilePath = path.join(
@@ -329,16 +330,14 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                         `${id}.info`,
                         `${name}.${ext}`
                     );
-        
-                    // 打印路径用于调试
-                    new Notice(`File real path: ${localFilePath}`);
-                    // print(`文件的真实路径是: ${localFilePath}`);
-        
+
+                    new Notice(t('menu.fileRealPath', { path: localFilePath }));
+
                     try {
                         await openFileInDefaultApp(localFilePath);
                     } catch (error) {
                         print('Error opening file:', error);
-                        new Notice('Cannot open the file, please check if the path is correct');
+                        new Notice(t('menu.cannotOpenFile'));
                     }
                 })
         );
@@ -354,16 +353,14 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                         `${id}.info`,
                         `${name}.${ext}`
                     );
-        
-                    // 打印路径用于调试
-                    new Notice(`File real path: ${localFilePath}`);
-                    // print(`文件的真实路径是: ${localFilePath}`);
-        
+
+                    new Notice(t('menu.fileRealPath', { path: localFilePath }));
+
                     try {
                         await openFileInOtherApps(localFilePath);
                     } catch (error) {
                         print('Error opening file:', error);
-                        new Notice('Cannot open the file, please check if the path is correct');
+                        new Notice(t('menu.cannotOpenFile'));
                     }
                 })
         );	
@@ -371,7 +368,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
         menu.addItem((item: MenuItem) =>
         item
             .setIcon("copy")
-            .setTitle("Copy source file")
+            .setTitle(t('menu.copySourceFile'))
             .onClick(() => {
                 const libraryPath = plugin.settings.libraryPath;
                 const localFilePath = path.join(
@@ -382,10 +379,10 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                 );
                 try {
                     copyFileToClipboardCMD(localFilePath);
-                    new Notice("Copied to clipboard!", 3000);
+                    new Notice(t('menu.copiedToClipboard'), 3000);
                 } catch (error) {
                     console.error(error);
-                    new Notice("Failed to copy the file!", 3000);
+                    new Notice(t('menu.copyFailed'), 3000);
                 }
             })
         );		
@@ -395,7 +392,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                 .setTitle(`Eagle Name: ${name}`)
                 .onClick(() => {
                     navigator.clipboard.writeText(name);
-                    new Notice(`Copied: ${name}`);
+                    new Notice(t('menu.copied', { value: name }));
                 })
         );
 
@@ -405,7 +402,7 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                 .setTitle(`Eagle Annotation: ${annotation}`)
                 .onClick(() => {
                     navigator.clipboard.writeText(annotation);
-                    new Notice(`Copied: ${annotation}`);
+                    new Notice(t('menu.copied', { value: annotation }));
                 })
         );
 
@@ -414,9 +411,8 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                 .setIcon("link-2")
                 .setTitle(`Eagle url: ${url}`)
                 .onClick(() => {
-                    // navigator.clipboard.writeText(url);
-                    window.open(url, '_self'); 
-                    new Notice(`Copied: ${url}`);
+                    window.open(url, '_self');
+                    new Notice(t('menu.copied', { value: url }));
                 })
         );
         // 确保 tags 是一个数组
@@ -429,18 +425,16 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
                 .onClick(() => {
                     const tagsString = tagsArray.join(', ');
                     navigator.clipboard.writeText(tagsString)
-                        .then(() => new Notice(`Copied: ${tagsString}`))
-                        .catch(err => new Notice('Failed to copy tags'));
+                        .then(() => new Notice(t('menu.copied', { value: tagsString })))
+                        .catch(err => new Notice(t('menu.copyTagsFailed')));
                 })
         );
         menu.addItem((item: MenuItem) =>
             item
                 .setIcon("wrench")
-                .setTitle("Modify properties")
+                .setTitle(t('menu.modifyProperties'))
                 .onClick(() => {
                     new ModifyPropertiesModal(plugin.app, id, name, annotation, url, tagsArray, (newId, newName, newAnnotation, newUrl, newTags) => {
-                        // new Notice(`Name changed to: ${newName}`);
-                        // 在这里处理保存逻辑
                     }).open();
                 })
         );
@@ -450,10 +444,10 @@ export async function addEagleImageMenuPreviewMode(plugin: MyPlugin, menu: Menu,
         menu.addItem((item: MenuItem) =>
             item
                 .setIcon("trash-2")
-                .setTitle("Delete attachment")
+                .setTitle(t('menu.deleteAttachment'))
                 .onClick(async () => {
                     await openDeleteAttachmentDialog(plugin, oburl, {
-                        contextTitle: '将删除 Eagle 附件，并可选择是否删除当前文件中的链接',
+                        contextTitle: t('menu.deleteDialogTitle'),
                         currentLinkMode: 'current-file-links',
                         currentLinkFile: getActiveReferenceFile(plugin),
                     });
@@ -468,11 +462,11 @@ export async function addEagleImageMenuSourceMode(plugin: MyPlugin, menu: Menu, 
     menu.addItem((item: MenuItem) =>
         item
             .setIcon("copy")
-            .setTitle("Copy markdown link")
+            .setTitle(t('menu.copyMarkdownLink'))
             .onClick(async () => {
                 const editor = plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
                 if (!editor) {
-                    new Notice('Cannot find the active editor');
+                    new Notice(t('menu.cannotFindEditor'));
                     return;
                 }
 
@@ -491,14 +485,14 @@ export async function addEagleImageMenuSourceMode(plugin: MyPlugin, menu: Menu, 
                     if (match) {
                         const linkText = match[1]; // 获取完整的匹配文本
                         navigator.clipboard.writeText(linkText);
-                        new Notice('Link copied');
+                        new Notice(t('menu.linkCopied'));
                         linkFound = true;
                         break; // 找到并复制后退出循环
                     }
                 }
 
                 if (!linkFound) {
-                    new Notice('Cannot find the link');
+                    new Notice(t('menu.cannotFindLink'));
                 }
                 
             })
@@ -506,10 +500,9 @@ export async function addEagleImageMenuSourceMode(plugin: MyPlugin, menu: Menu, 
     menu.addItem((item: MenuItem) =>
         item
             .setIcon("trash-2")
-            .setTitle("Clear markdown link")
+            .setTitle(t('menu.clearMarkdownLink'))
             .onClick(() => {
                 try {
-                    // Util.handlerDelFile(FileBaseName, currentMd, this);
                     const target = getMouseEventTarget(event);
                     const editor = plugin.app.workspace.getActiveViewOfType(MarkdownView)?.editor;
                     if (!editor) {
@@ -522,17 +515,17 @@ export async function addEagleImageMenuSourceMode(plugin: MyPlugin, menu: Menu, 
                     const target_pos = typeof targetPos === 'number' ? targetPos : editorView.posAtDOM(target);
                     deleteCurTargetLink(url, plugin, target_pos);
                 } catch {
-                    new Notice("Error, could not clear the file!");
+                    new Notice(t('menu.clearLinkError'));
                 }
             })
     );
     menu.addItem((item: MenuItem) =>
         item
             .setIcon("trash")
-            .setTitle("Delete attachment")
+            .setTitle(t('menu.deleteAttachment'))
             .onClick(async () => {
                 await openDeleteAttachmentDialog(plugin, url, {
-                    contextTitle: '将删除 Eagle 附件，并可选择是否删除当前链接或全部链接',
+                    contextTitle: t('menu.deleteDialogTitleSourceMode'),
                     currentLinkMode: 'precise-current-link',
                     currentLinkTargetPos: typeof targetPos === 'number' ? targetPos : null,
                     currentLinkFile: getActiveReferenceFile(plugin),
@@ -563,10 +556,10 @@ class ModifyPropertiesModal extends Modal {
 
 	onOpen() {
 		const { contentEl } = this;
-		contentEl.createEl('h2', { text: 'Modify Properties' });
+		contentEl.createEl('h2', { text: t('modal.modifyProperties.title') });
 
 		new Setting(contentEl)
-			.setName('Annotation')
+			.setName(t('modal.modifyProperties.annotation'))
 			.addText(text => text
 				.setValue(this.annotation)
 				.onChange(value => {
@@ -576,7 +569,7 @@ class ModifyPropertiesModal extends Modal {
 			);
 
 		new Setting(contentEl)
-			.setName('URL')
+			.setName(t('modal.modifyProperties.url'))
 			.addText(text => text
 				.setValue(this.url)
 				.onChange(value => {
@@ -586,8 +579,8 @@ class ModifyPropertiesModal extends Modal {
 			);
 
 		new Setting(contentEl)
-			.setName('Tags')
-			.setDesc('Separate tags use ,')
+			.setName(t('modal.modifyProperties.tags'))
+			.setDesc(t('modal.modifyProperties.tagsDesc'))
 			.addText(text => text
 				.setValue(this.tags.join(', '))
 				.onChange(value => {
@@ -598,7 +591,7 @@ class ModifyPropertiesModal extends Modal {
 
 		new Setting(contentEl)
 			.addButton(btn => btn
-				.setButtonText('Save')
+				.setButtonText(t('modal.modifyProperties.save'))
 				.setCta()
 				.onClick(() => {
 					// 构建数据对象
@@ -622,11 +615,11 @@ class ModifyPropertiesModal extends Modal {
 						.then(response => response.json())
 						.then(result => {
 							print(result);
-							new Notice('Data uploaded successfully');
+							new Notice(t('modal.modifyProperties.saveSuccess'));
 						})
 						.catch(error => {
 							print('error', error);
-							new Notice('Failed to upload data');
+							new Notice(t('modal.modifyProperties.saveFailed'));
 						});
 
 					// 调用 onSubmit 回调
@@ -708,7 +701,7 @@ export function deleteCurTargetLink(
 ) {
     const activeView = plugin.app.workspace.getActiveViewOfType(MarkdownView);
     if (!activeView) {
-        new Notice("无法获取活动视图！", 3000);
+        new Notice(t('eagleDelete.noActiveEditor'), 3000);
         return;
     }
     const editor = activeView.editor;
@@ -727,11 +720,11 @@ export function deleteCurTargetLink(
         // 普通文本中的链接
         const finds = findLinkInLine(url, line_text);
         if (finds.length === 0) {
-            new Notice("无法找到链接文本，请手动删除！", 3000);
+            new Notice(t('eagleDelete.linkNotFound'), 3000);
             return;
         }
         else if (finds.length !== 1) {
-            new Notice("当前行中发现多个相同的链接，请手动删除！", 3000);
+            new Notice(t('eagleDelete.multipleLinks'), 3000);
             return;
         }
         else {
@@ -778,11 +771,11 @@ export function deleteCurTargetLink(
     }
     
     if (finds_all.length === 0) {
-        new Notice(`无法在${mode}中找到链接文本，请手动删除！`, 3000);
+        new Notice(t('eagleDelete.linkNotFound'), 3000);
         return;
     }
     else if (finds_all.length !== 1) {
-        new Notice(`在${mode}中找到多个相同的链接，请手动删除！`, 3000);
+        new Notice(t('eagleDelete.multipleLinks'), 3000);
         return;
     }
     else {

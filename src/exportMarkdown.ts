@@ -6,6 +6,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import type MyPlugin from './main';
 import type { MarkdownExportFormat } from './setting';
+import { t } from './i18n';
 
 const execFileAsync = promisify(execFile);
 const EAGLE_MARKDOWN_LINK_REGEX = /(!?)\[([^\]]*)\]\((http:\/\/localhost:\d+\/images\/([^)\/\s]+)\.info)([^)]*)\)/g;
@@ -68,7 +69,7 @@ export function registerMarkdownExportFileMenu(plugin: MyPlugin): void {
 			menu.addItem((item) =>
 				item
 					.setIcon('download')
-					.setTitle('Export Markdown with Eagle attachments')
+					.setTitle(t('export.menuTitle'))
 					.onClick(() => {
 						new ExportMarkdownModal(plugin, file).open();
 					}),
@@ -106,22 +107,22 @@ class ExportMarkdownModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: 'Export Markdown with Eagle attachments' });
+		contentEl.createEl('h2', { text: t('export.title') });
 		contentEl.createEl('p', {
-			text: 'Create a shareable Markdown package and rewrite Eagle localhost links into relative attachment paths.',
+			text: t('export.desc'),
 		});
 
 		new Setting(contentEl)
-			.setName('Source note')
+			.setName(t('export.sourceNote'))
 			.setDesc(this.file.path);
 
 		new Setting(contentEl)
-			.setName('Package format')
-			.setDesc('Folder keeps plain files. ZIP creates a compressed package with the same structure.')
+			.setName(t('export.format.name'))
+			.setDesc(t('export.format.desc'))
 			.addDropdown((dropdown) => {
 				dropdown
-					.addOption('folder', 'Folder')
-					.addOption('zip', 'ZIP')
+					.addOption('folder', t('export.format.folder'))
+					.addOption('zip', t('export.format.zip'))
 					.setValue(this.format)
 					.onChange((value: MarkdownExportFormat) => {
 						this.format = value;
@@ -131,11 +132,11 @@ class ExportMarkdownModal extends Modal {
 			});
 
 		new Setting(contentEl)
-			.setName('Destination path')
-			.setDesc(this.format === 'folder' ? 'Final export folder path.' : 'Final ZIP file path.')
+			.setName(t('export.destination.name'))
+			.setDesc(this.format === 'folder' ? t('export.destination.descFolder') : t('export.destination.descZip'))
 			.addText((text) => {
 				text
-					.setPlaceholder(this.format === 'folder' ? 'Enter export folder path' : 'Enter export zip path')
+					.setPlaceholder(this.format === 'folder' ? t('export.destination.placeholderFolder') : t('export.destination.placeholderZip'))
 					.setValue(this.destinationPath)
 					.onChange((value) => {
 						this.destinationPath = value.trim();
@@ -146,7 +147,7 @@ class ExportMarkdownModal extends Modal {
 			.addExtraButton((button) => {
 				button
 					.setIcon('folder-open')
-					.setTooltip(getDialogBridge() ? 'Browse destination' : 'Native picker unavailable, enter path manually')
+					.setTooltip(getDialogBridge() ? t('export.destination.browse') : t('export.destination.nativeUnavailable'))
 					.setDisabled(!getDialogBridge())
 					.onClick(() => {
 						void this.browseDestination();
@@ -154,11 +155,11 @@ class ExportMarkdownModal extends Modal {
 			});
 
 		new Setting(contentEl)
-			.setName('Export')
-			.setDesc(`The exported package will contain ${sanitizeFileName(this.file.name)} and ${ATTACHMENT_DIR_NAME}/.`)
+			.setName(t('export.exportButton'))
+			.setDesc(t('export.descWithFile', { fileName: sanitizeFileName(this.file.name) }))
 			.addButton((button) => {
 				button
-					.setButtonText(this.isExporting ? 'Exporting...' : 'Export')
+					.setButtonText(this.isExporting ? t('export.exporting') : t('export.exportButton'))
 					.setCta()
 					.setDisabled(this.isExporting)
 					.onClick(() => {
@@ -171,7 +172,7 @@ class ExportMarkdownModal extends Modal {
 	private async browseDestination(): Promise<void> {
 		const dialogBridge = getDialogBridge();
 		if (!dialogBridge) {
-			new Notice('Native file picker unavailable. Enter the export path manually.');
+			new Notice(t('export.nativePickerUnavailable'));
 			return;
 		}
 
@@ -179,7 +180,7 @@ class ExportMarkdownModal extends Modal {
 			const result = await showOpenDirectoryDialog(dialogBridge, {
 				defaultPath: getExistingParentPath(this.destinationPath) || path.join(os.homedir(), 'Downloads'),
 				properties: ['openDirectory', 'createDirectory'],
-				title: 'Choose export parent folder',
+				title: t('export.browseFolderTitle'),
 			});
 
 			if (result.canceled || result.filePaths.length === 0) {
@@ -193,8 +194,8 @@ class ExportMarkdownModal extends Modal {
 
 		const result = await showSaveDialog(dialogBridge, {
 			defaultPath: ensureZipExtension(this.destinationPath),
-			filters: [{ name: 'ZIP archive', extensions: ['zip'] }],
-			title: 'Choose export zip path',
+			filters: [{ name: t('export.zipFilter'), extensions: ['zip'] }],
+			title: t('export.browseZipTitle'),
 		});
 
 		if (result.canceled || !result.filePath) {
@@ -218,13 +219,13 @@ class ExportMarkdownModal extends Modal {
 
 		const destinationPath = this.destinationPath.trim();
 		if (!destinationPath) {
-			new Notice('Enter an export path before exporting.');
+			new Notice(t('export.noPath'));
 			return;
 		}
 
 		this.isExporting = true;
 		if (this.exportButtonEl) {
-			this.exportButtonEl.textContent = 'Exporting...';
+			this.exportButtonEl.textContent = t('export.exporting');
 			this.exportButtonEl.disabled = true;
 		}
 
@@ -239,13 +240,19 @@ class ExportMarkdownModal extends Modal {
 			await this.plugin.saveSettings();
 
 			const unresolvedSuffix = summary.unresolvedCount > 0
-				? ` ${summary.unresolvedCount} link(s) stayed unchanged because the source file could not be resolved.`
+				? t('export.unresolvedSuffix', { count: summary.unresolvedCount })
 				: '';
 			const externalSuffix = summary.externalUrlCount > 0
-				? ` ${summary.externalUrlCount} website link(s) were converted to direct URLs.`
+				? t('export.externalSuffix', { count: summary.externalUrlCount })
 				: '';
 			new Notice(
-				`Exported ${summary.convertedCount} Eagle link(s) to ${summary.format === 'zip' ? 'ZIP' : 'folder'}: ${summary.outputPath}.${unresolvedSuffix}${externalSuffix}`,
+				t('export.success', {
+					count: summary.convertedCount,
+					format: summary.format === 'zip' ? 'ZIP' : t('export.format.folder'),
+					path: summary.outputPath,
+					unresolved: unresolvedSuffix,
+					external: externalSuffix,
+				}),
 				10000,
 			);
 			this.close();
@@ -254,7 +261,7 @@ class ExportMarkdownModal extends Modal {
 		} finally {
 			this.isExporting = false;
 			if (this.exportButtonEl) {
-				this.exportButtonEl.textContent = 'Export';
+				this.exportButtonEl.textContent = t('export.exportButton');
 				this.exportButtonEl.disabled = false;
 			}
 		}
@@ -748,12 +755,12 @@ function getExportErrorMessage(error: unknown): string {
 
 	switch (message) {
 		case 'EAGLE_LIBRARY_PATH_NOT_SET':
-			return 'Set Eagle Library Path before exporting notes that contain Eagle attachments.';
+			return t('export.error.libraryPathNotSet');
 		case 'FILESYSTEM_ADAPTER_REQUIRED':
-			return 'Markdown export is only available in desktop vaults backed by the file system.';
+			return t('export.error.filesystemRequired');
 		case 'EXPORT_PATH_UNAVAILABLE':
-			return 'Could not allocate a free export path. Try another destination.';
+			return t('export.error.pathUnavailable');
 		default:
-			return `Export failed: ${message}`;
+			return t('export.error.default', { message });
 	}
 }

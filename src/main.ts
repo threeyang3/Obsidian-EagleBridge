@@ -24,6 +24,7 @@ import { FileTagSyncState, getFileTagSyncState, mergeItemTagsIntoFileFrontmatter
 import { syncObsidianLinkForFile } from './obsidianLinkSync';
 import { registerMarkdownExportFileMenu } from './exportMarkdown';
 import { EagleReferenceIndex, EagleReferenceView, EAGLE_REFERENCE_VIEW_TYPE, activateEagleReferenceView } from './eagleReferenceView';
+import { t } from './i18n';
 
 
 let DEBUG = false;
@@ -57,22 +58,22 @@ export default class MyPlugin extends Plugin {
 		this.register(() => {
 			this.app.workspace.getLeavesOfType(EAGLE_REFERENCE_VIEW_TYPE).forEach((leaf) => leaf.detach());
 		});
-		this.addRibbonIcon('network', 'Open Eagle reference view', () => {
+		this.addRibbonIcon('network', t('main.ribbonIcon'), () => {
 			void this.openEagleReferenceView();
 		});
 		this.addCommand({
 			id: 'open-eagle-reference-view',
-			name: 'Open Eagle reference view',
+			name: t('main.cmd.openRefView'),
 			callback: () => {
 				void this.openEagleReferenceView();
 			},
 		});
 		this.addCommand({
 			id: 'refresh-eagle-reference-index',
-			name: 'Refresh Eagle reference index',
+			name: t('main.cmd.refreshRefIndex'),
 			callback: async () => {
 				await this.eagleReferenceIndex.rebuild();
-				new Notice('Eagle reference index refreshed.');
+				new Notice(t('main.notice.refIndexRefreshed'));
 			},
 		});
 		

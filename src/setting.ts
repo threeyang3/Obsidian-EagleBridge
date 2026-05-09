@@ -1,6 +1,7 @@
 import { App, PluginSettingTab, Platform, Setting, Notice } from 'obsidian';
 import MyPlugin from './main';
 import { startServer, refreshServer, stopServer, detectLanIp } from './server';
+import { t } from './i18n';
 
 export interface EagleUploadSettings {
 	enabled: boolean;
@@ -152,10 +153,10 @@ export class SampleSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName('Port')
-			.setDesc('Enter the port number of the server, ranging from 1000 to 9999, and do not modify it after setting.')
+			.setName(t('settings.port.name'))
+			.setDesc(t('settings.port.desc'))
 			.addText(text => text
-				.setPlaceholder('Enter port number')
+				.setPlaceholder(t('settings.port.placeholder'))
 				.setValue(this.plugin.settings.port.toString())
 				.onChange(async (value) => {
 					this.plugin.settings.port = parseInt(value);
@@ -163,37 +164,37 @@ export class SampleSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-				.setName('Library Paths')
-			.setDesc(`Enter multiple library paths for the server. Current valid path: ${this.plugin.settings.libraryPath}`)
+				.setName(t('settings.libraryPaths.name'))
+			.setDesc(t('settings.libraryPaths.desc', { path: this.plugin.settings.libraryPath }))
 			.addButton(button => {
 				button.setButtonText('+')
 					.setCta()
 					.onClick(() => {
 						this.plugin.settings.libraryPaths.push('');
 						this.plugin.saveSettings();
-						this.display(); // 重新渲染设置界面
+						this.display();
 					});
 			});
-	
+
 			this.plugin.settings.libraryPaths.forEach((path, index) => {
 				new Setting(containerEl)
 					.addText(text => text
-						.setPlaceholder('Enter library path')
+						.setPlaceholder(t('settings.libraryPaths.placeholder'))
 						.setValue(path)
 						.onChange(async (value) => {
 							this.plugin.settings.libraryPaths[index] = value;
 							await this.plugin.saveSettings();
-							await this.plugin.updateLibraryPath(); // 更新Library Path
-							this.display(); // 重新渲染设置界面
+							await this.plugin.updateLibraryPath();
+							this.display();
 						}))
 					.addExtraButton(button => {
 						button.setIcon('cross')
-							.setTooltip('Remove')
+							.setTooltip(t('settings.libraryPaths.remove'))
 							.onClick(async () => {
 								this.plugin.settings.libraryPaths.splice(index, 1);
 								await this.plugin.saveSettings();
-								await this.plugin.updateLibraryPath(); // 更新Library Path
-								this.display(); // 重新渲染设置界面
+								await this.plugin.updateLibraryPath();
+								this.display();
 							});
 					});
 			});
@@ -205,21 +206,21 @@ export class SampleSettingTab extends PluginSettingTab {
 		// 		.setDisabled(true)); // 禁用输入框，只显示有效路径
 
 		new Setting(containerEl)
-			.setName('Eagle Folder ID')
-			.setDesc('Enter the folder ID for Eagle')
+			.setName(t('settings.folderId.name'))
+			.setDesc(t('settings.folderId.desc'))
 			.addText(text => text
-				.setPlaceholder('Enter folder ID')
+				.setPlaceholder(t('settings.folderId.placeholder'))
 				.setValue(this.plugin.settings.folderId || '')
 				.onChange(async (value) => {
 					this.plugin.settings.folderId = value;
 					await this.plugin.saveSettings();
 				}));
-		
+
 		new Setting(containerEl)
-		.setName('Image size')
-		.setDesc('Default size for image import')
+		.setName(t('settings.imageSize.name'))
+		.setDesc(t('settings.imageSize.desc'))
 		.addText(text => text
-			.setPlaceholder('Enter image size')
+			.setPlaceholder(t('settings.imageSize.placeholder'))
 			.setValue(this.plugin.settings.imageSize?.toString() || '')
 			.onChange(async (value) => {
 				this.plugin.settings.imageSize = value ? parseInt(value) : undefined;
@@ -227,8 +228,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			}));
 
         new Setting(containerEl)
-            .setName("Click to view images")
-            .setDesc("Click the right half of the image to view the image in detail.")
+            .setName(t('settings.clickView.name'))
+            .setDesc(t('settings.clickView.desc'))
             .addToggle((toggle) => {
                 toggle.setValue(this.plugin.settings.clickView)
                     .onChange(async (value) => {
@@ -238,34 +239,34 @@ export class SampleSettingTab extends PluginSettingTab {
             });
 
 		new Setting(containerEl)
-		.setName('Adaptive image display ratio based on window size')
-		.setDesc('When the image exceeds the window size, the image is displayed adaptively according to the window size.')
+		.setName(t('settings.adaptiveRatio.name'))
+		.setDesc(t('settings.adaptiveRatio.desc'))
 		.addSlider((slider) => {
 			slider.setLimits(0.1, 1, 0.05);
 			slider.setValue(this.plugin.settings.adaptiveRatio);
 			slider.onChange(async (value) => {
 				this.plugin.settings.adaptiveRatio = value;
-				new Notice(`Adaptive ratio: ${value}`);
+				new Notice(t('settings.adaptiveRatio.notice', { value }));
 				await this.plugin.saveSettings();
 			});
 			slider.setDynamicTooltip();
 		});
 
 		const attachmentTagSyncPanel = containerEl.createDiv({ cls: 'eagle-tag-sync-panel' });
-		attachmentTagSyncPanel.createEl('h3', { text: 'Attachment tag sync' });
+		attachmentTagSyncPanel.createEl('h3', { text: t('settings.tagSync.title') });
 		attachmentTagSyncPanel.createEl('p', {
-			text: 'Choose a single direction for automatic tag updates when Eagle attachments enter the page.',
+			text: t('settings.tagSync.desc'),
 			cls: 'eagle-tag-sync-panel-desc',
 		});
 
 		new Setting(attachmentTagSyncPanel)
-			.setName('Sync direction')
-			.setDesc('Use one mode at a time to avoid recursive tag changes across the page.')
+			.setName(t('settings.tagSync.direction.name'))
+			.setDesc(t('settings.tagSync.direction.desc'))
 			.addDropdown((dropdown) => {
 				dropdown
-					.addOption('off', 'Off')
-					.addOption('appendPageTagsToEagle', 'Append page tags to Eagle')
-					.addOption('importEagleTagsToYaml', 'Import Eagle tags to YAML')
+					.addOption('off', t('settings.tagSync.mode.off'))
+					.addOption('appendPageTagsToEagle', t('settings.tagSync.mode.append'))
+					.addOption('importEagleTagsToYaml', t('settings.tagSync.mode.import'))
 					.setValue(this.plugin.settings.attachmentTagSyncMode)
 					.onChange(async (value: AttachmentTagSyncMode) => {
 						this.plugin.settings.attachmentTagSyncMode = value;
@@ -278,8 +279,8 @@ export class SampleSettingTab extends PluginSettingTab {
 		if (this.plugin.settings.attachmentTagSyncMode === 'appendPageTagsToEagle') {
 			const appendModeCard = attachmentTagSyncPanel.createDiv({ cls: 'eagle-tag-sync-subcard' });
 			new Setting(appendModeCard)
-				.setName('Exact align tags')
-				.setDesc('Replace Eagle item tags with the current page tags instead of only appending missing tags.')
+				.setName(t('settings.tagSync.exactAlign.name'))
+				.setDesc(t('settings.tagSync.exactAlign.desc'))
 				.addToggle((toggle) => {
 					toggle.setValue(this.plugin.settings.exactSyncPageTagsToEagle)
 						.onChange(async (value) => {
@@ -294,23 +295,23 @@ export class SampleSettingTab extends PluginSettingTab {
 		const attachmentTagSyncHint = attachmentTagSyncPanel.createDiv({ cls: 'eagle-tag-sync-hint' });
 		const activeModeText = this.plugin.settings.attachmentTagSyncMode === 'appendPageTagsToEagle'
 			? this.plugin.settings.exactSyncPageTagsToEagle
-				? 'Exact align mode: Eagle items in the page are overwritten to match the current page tags.'
-				: 'Append mode: when page tags or Eagle links change, Eagle items in the page only receive missing page tags.'
+				? t('settings.tagSync.hint.exactAlign')
+				: t('settings.tagSync.hint.append')
 			: this.plugin.settings.attachmentTagSyncMode === 'importEagleTagsToYaml'
-				? 'Import mode: when a new Eagle attachment is added to the page, its Eagle tags are merged into YAML tags.'
-				: 'Off mode: page tags and Eagle tags stay independent unless you run the manual append command.';
+				? t('settings.tagSync.hint.import')
+				: t('settings.tagSync.hint.off');
 		attachmentTagSyncHint.setText(activeModeText);
 
 		const obsidianLinkSyncPanel = containerEl.createDiv({ cls: 'eagle-obsidian-link-panel' });
-		obsidianLinkSyncPanel.createEl('h3', { text: 'Obsidian link sync' });
+		obsidianLinkSyncPanel.createEl('h3', { text: t('settings.obsidianLink.title') });
 		obsidianLinkSyncPanel.createEl('p', {
-			text: 'Send the current page advanced URI to Eagle. The command always works; automatic mode only runs when new Eagle attachments appear in a page that already has YAML id.',
+			text: t('settings.obsidianLink.desc'),
 			cls: 'eagle-obsidian-link-panel-desc',
 		});
 
 		new Setting(obsidianLinkSyncPanel)
-			.setName('Auto send page link to Eagle')
-			.setDesc('When new Eagle items are added into the current Markdown page, automatically write the page advanced URI into their Obsidian metadata.')
+			.setName(t('settings.obsidianLink.auto.name'))
+			.setDesc(t('settings.obsidianLink.auto.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.autoSyncObsidianLinkToEagle)
 					.onChange(async (value) => {
@@ -321,22 +322,22 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(obsidianLinkSyncPanel)
-			.setName('Obsidian store ID')
-			.setDesc('Vault identifier used in obsidian://adv-uri links.')
+			.setName(t('settings.obsidianLink.storeId.name'))
+			.setDesc(t('settings.obsidianLink.storeId.desc'))
 			.addText(text => text
-				.setPlaceholder('Enter Obsidian store ID')
+				.setPlaceholder(t('settings.obsidianLink.storeId.placeholder'))
 				.setValue(this.plugin.settings.obsidianStoreId)
 				.onChange(async (value) => {
 					this.plugin.settings.obsidianStoreId = value;
 					await this.plugin.saveSettings();
 				}));
 		new Setting(containerEl)
-		.setName('Open in obsidian')
-		.setDesc('Default opening of attachments in obsidian. Note: The Web Viewer must be enabled in the core plugin to use this feature. ')
+		.setName(t('settings.openInObsidian.name'))
+		.setDesc(t('settings.openInObsidian.desc'))
 		.addDropdown(dropdown => {
-			dropdown.addOption('newPage', 'Open in new page')
-				.addOption('popup', 'Open in popup')
-				.addOption('rightPane', 'Open in right pane')
+			dropdown.addOption('newPage', t('settings.openInObsidian.newPage'))
+				.addOption('popup', t('settings.openInObsidian.popup'))
+				.addOption('rightPane', t('settings.openInObsidian.rightPane'))
 				.setValue(this.plugin.settings.openInObsidian || 'newPage')
 				.onChange(async (value) => {
 					this.plugin.settings.openInObsidian = value;
@@ -347,8 +348,8 @@ export class SampleSettingTab extends PluginSettingTab {
 		const uploadSettingsContainer = containerEl.createDiv({ cls: 'eagle-upload-panel' });
 
 		new Setting(uploadSettingsContainer)
-			.setName('Attachment upload')
-			.setDesc('Master switch for uploading dragged or pasted external content to Eagle.')
+			.setName(t('settings.upload.name'))
+			.setDesc(t('settings.upload.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.enabled)
 					.onChange(async (value) => {
@@ -360,20 +361,20 @@ export class SampleSettingTab extends PluginSettingTab {
 
 		const uploadTypesDetails = uploadSettingsContainer.createEl('details', { cls: 'eagle-upload-details' });
 		uploadTypesDetails.open = this.plugin.settings.upload.enabled;
-		uploadTypesDetails.createEl('summary', { text: 'Configure upload rules' });
+		uploadTypesDetails.createEl('summary', { text: t('settings.upload.configure') });
 		const uploadGrid = uploadTypesDetails.createDiv({ cls: 'eagle-upload-grid' });
 		const uploadTargetCard = uploadGrid.createDiv({ cls: 'eagle-upload-card' });
 		const uploadFormatCard = uploadGrid.createDiv({ cls: 'eagle-upload-card' });
 
-		uploadTargetCard.createEl('h3', { text: 'Obsidian type' });
+		uploadTargetCard.createEl('h3', { text: t('settings.upload.obsidianType') });
 		uploadTargetCard.createEl('p', {
-			text: 'Choose which Obsidian document types are allowed to trigger Eagle upload.',
+			text: t('settings.upload.obsidianTypeDesc'),
 			cls: 'eagle-upload-card-desc',
 		});
 
 		new Setting(uploadTargetCard)
-			.setName('Markdown upload')
-			.setDesc('Handle paste and drag events inside Markdown editors.')
+			.setName(t('settings.upload.markdown.name'))
+			.setDesc(t('settings.upload.markdown.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.markdown)
 					.onChange(async (value) => {
@@ -383,8 +384,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(uploadTargetCard)
-			.setName('Canvas upload')
-			.setDesc('Handle paste and drag events inside Canvas views.')
+			.setName(t('settings.upload.canvas.name'))
+			.setDesc(t('settings.upload.canvas.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.canvas)
 					.onChange(async (value) => {
@@ -393,15 +394,15 @@ export class SampleSettingTab extends PluginSettingTab {
 					});
 			});
 
-		uploadFormatCard.createEl('h3', { text: 'Content type' });
+		uploadFormatCard.createEl('h3', { text: t('settings.upload.contentType') });
 		uploadFormatCard.createEl('p', {
-			text: 'Choose which dragged or pasted content types should be uploaded to Eagle.',
+			text: t('settings.upload.contentTypeDesc'),
 			cls: 'eagle-upload-card-desc',
 		});
 
 		new Setting(uploadFormatCard)
-			.setName('Image upload')
-			.setDesc('Upload image files to Eagle.')
+			.setName(t('settings.upload.image.name'))
+			.setDesc(t('settings.upload.image.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.image)
 					.onChange(async (value) => {
@@ -411,8 +412,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(uploadFormatCard)
-			.setName('Video upload')
-			.setDesc('Upload video files to Eagle.')
+			.setName(t('settings.upload.video.name'))
+			.setDesc(t('settings.upload.video.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.video)
 					.onChange(async (value) => {
@@ -422,8 +423,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(uploadFormatCard)
-			.setName('Website upload')
-			.setDesc('URL uploaded to eagle. note: 1. eagle will automatically get the cover, with a certain delay. 2. when exporting notes to share, may not be able to jump effectively. 3. This option does not affect links dragged/copied from eagle to obsidian. Large delay may occur, not recommended to enable.')
+			.setName(t('settings.upload.website.name'))
+			.setDesc(t('settings.upload.website.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.website)
 					.onChange(async (value) => {
@@ -433,8 +434,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(uploadFormatCard)
-			.setName('Other upload')
-			.setDesc('Upload PDF and other non-image, non-video files to Eagle.')
+			.setName(t('settings.upload.other.name'))
+			.setDesc(t('settings.upload.other.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.upload.other)
 					.onChange(async (value) => {
@@ -445,10 +446,10 @@ export class SampleSettingTab extends PluginSettingTab {
 
 		if (Platform.isDesktopApp) {
 			new Setting(containerEl)
-				.setName('LAN IP address')
-				.setDesc('For mobile viewing: IP of this computer on LAN. Auto-detect or enter manually.')
+				.setName(t('settings.lanIp.name'))
+				.setDesc(t('settings.lanIp.desc'))
 				.addText(text => text
-					.setPlaceholder('e.g. 192.168.1.100')
+					.setPlaceholder(t('settings.lanIp.placeholder'))
 					.setValue(this.plugin.settings.lanIpAddress)
 					.onChange(async (value) => {
 						this.plugin.settings.lanIpAddress = value.trim();
@@ -456,33 +457,33 @@ export class SampleSettingTab extends PluginSettingTab {
 					}))
 				.addExtraButton(button => {
 					button.setIcon('search')
-						.setTooltip('Auto-detect')
+						.setTooltip(t('settings.lanIp.autoDetect'))
 						.onClick(async () => {
 							const ip = detectLanIp();
 							if (ip) {
 								this.plugin.settings.lanIpAddress = ip;
 								await this.plugin.saveSettings();
 								this.display();
-								new Notice('LAN IP set to ' + ip);
+								new Notice(t('settings.lanIp.detected', { ip }));
 							} else {
-								new Notice('Could not detect LAN IP');
+								new Notice(t('settings.lanIp.detectFailed'));
 							}
 						});
 					});
 			}
 
 		new Setting(containerEl)
-			.setName('Refresh Server')
-			.setDesc('Refresh the server with the new settings')
+			.setName(t('settings.server.name'))
+			.setDesc(t('settings.server.desc'))
 			.addButton(button => button
-				.setButtonText('Refresh')
+				.setButtonText(t('settings.server.button'))
 				.onClick(() => {
 					refreshServer(this.plugin.settings.libraryPath, this.plugin.settings.port);
 				}));
 
 		new Setting(containerEl)
-			.setName('Debug Mode')
-			.setDesc('Enable or disable debug mode')
+			.setName(t('settings.debug.name'))
+			.setDesc(t('settings.debug.desc'))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.debug)
 				.onChange(async (value) => {
@@ -491,11 +492,11 @@ export class SampleSettingTab extends PluginSettingTab {
 				}));
 
 		const migrationPanel = containerEl.createDiv({ cls: 'eagle-migration-panel' });
-		migrationPanel.createEl('h3', { text: 'Batch migration' });
+		migrationPanel.createEl('h3', { text: t('settings.migration.title') });
 
 		new Setting(migrationPanel)
-			.setName('Delete original files after migration')
-			.setDesc('When enabled, original local attachments are moved to trash after successful upload to Eagle.')
+			.setName(t('settings.migration.deleteOriginal.name'))
+			.setDesc(t('settings.migration.deleteOriginal.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.migrateDeleteOriginal)
 					.onChange(async (value) => {
@@ -505,8 +506,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(migrationPanel)
-			.setName('Backup attachments before migration')
-			.setDesc('Copy all attachment files to .eaglebridge-backup/ before uploading.')
+			.setName(t('settings.migration.backup.name'))
+			.setDesc(t('settings.migration.backup.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.migrateBackup)
 					.onChange(async (value) => {
@@ -516,8 +517,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(migrationPanel)
-			.setName('Wait time between uploads (seconds)')
-			.setDesc('Delay in seconds between each Eagle import to avoid overwhelming the API.')
+			.setName(t('settings.migration.waitTime.name'))
+			.setDesc(t('settings.migration.waitTime.desc'))
 			.addSlider((slider) => {
 				slider.setLimits(0, 10, 1);
 				slider.setValue(this.plugin.settings.migrateWaitImportSeconds);
@@ -529,8 +530,8 @@ export class SampleSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(migrationPanel)
-			.setName('Keep temporary upload files')
-			.setDesc('When enabled, temporary copies of files used for Eagle upload are not cleaned up.')
+			.setName(t('settings.migration.keepTemp.name'))
+			.setDesc(t('settings.migration.keepTemp.desc'))
 			.addToggle((toggle) => {
 				toggle.setValue(this.plugin.settings.migrateKeepTemp)
 					.onChange(async (value) => {

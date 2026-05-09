@@ -4,6 +4,7 @@ import { App, Notice, TFile } from 'obsidian';
 import { MyPluginSettings } from './setting';
 import { print } from './main';
 import { getInfoFileIdsFromFile } from './synchronizedpagetabs';
+import { t } from './i18n';
 
 interface ObsidianLinkEntry {
 	name: string;
@@ -23,7 +24,7 @@ interface SyncObsidianLinkOptions {
 export async function syncCurrentPageObsidianLinkToEagle(app: App, settings: MyPluginSettings): Promise<void> {
 	const activeFile = app.workspace.getActiveFile();
 	if (!activeFile) {
-		new Notice('No active file found.');
+		new Notice(t('obsidianLink.noActiveFile'));
 		return;
 	}
 
@@ -40,14 +41,14 @@ export async function syncObsidianLinkForFile(
 
 	if (!settings.libraryPath) {
 		if (shouldNotify) {
-			new Notice('Eagle library path is not configured.');
+			new Notice(t('obsidianLink.libraryPathRequired'));
 		}
 		return;
 	}
 
 	if (!settings.obsidianStoreId?.trim()) {
 		if (shouldNotify) {
-			new Notice('Obsidian store ID is required.');
+			new Notice(t('obsidianLink.storeIdRequired'));
 		}
 		return;
 	}
@@ -55,7 +56,7 @@ export async function syncObsidianLinkForFile(
 	const pageUid = getCurrentPageUid(app, file);
 	if (!pageUid) {
 		if (shouldNotify) {
-			new Notice('Current page YAML id is required for advanced URI.');
+			new Notice(t('obsidianLink.pageUidRequired'));
 		}
 		return;
 	}
@@ -63,7 +64,7 @@ export async function syncObsidianLinkForFile(
 	const itemIds = options.itemIds ?? await getInfoFileIdsFromFile(app, file);
 	if (itemIds.length === 0) {
 		if (shouldNotify) {
-			new Notice('No Eagle items found in the current page.');
+			new Notice(t('obsidianLink.noEagleItems'));
 		}
 		return;
 	}
@@ -100,9 +101,9 @@ export async function syncObsidianLinkForFile(
 
 	if (shouldNotify) {
 		if (updatedCount > 0) {
-			new Notice(`Sent current page link to ${updatedCount} Eagle item(s).`);
+			new Notice(t('obsidianLink.sent', { count: updatedCount }));
 		} else {
-			new Notice('Current page link is already present in Eagle.');
+			new Notice(t('obsidianLink.alreadySent'));
 		}
 	}
 }

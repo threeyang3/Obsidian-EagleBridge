@@ -14,6 +14,7 @@ import {
 import type MyPlugin from './main';
 import { isPathInsideDirectory } from './eaglePaths';
 import { resolveFilePathToEagleLink, type ResolvedEagleLink } from './urlHandler';
+import { t } from './i18n';
 
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -83,12 +84,12 @@ interface UploadExecutionStats {
 export async function uploadCurrentMarkdownAttachmentsToEagle(plugin: MyPlugin): Promise<void> {
 	const activeFile = plugin.app.workspace.getActiveFile();
 	if (!(activeFile instanceof TFile) || activeFile.extension !== 'md') {
-		new Notice('请先打开一个 Markdown 文档。');
+		new Notice(t('batch.noMarkdownFile'));
 		return;
 	}
 
 	if (!(plugin.app.vault.adapter instanceof FileSystemAdapter)) {
-		new Notice('该命令仅支持桌面端文件系统仓库。');
+		new Notice(t('batch.desktopOnly'));
 		return;
 	}
 
@@ -98,21 +99,21 @@ export async function uploadCurrentMarkdownAttachmentsToEagle(plugin: MyPlugin):
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (message === 'FILE_CACHE_UNAVAILABLE') {
-			new Notice('当前文档的链接缓存尚未就绪，请稍后再试。');
+			new Notice(t('batch.cacheNotReady'));
 			return;
 		}
 
 		if (message === 'FILESYSTEM_ADAPTER_REQUIRED') {
-			new Notice('该命令仅支持桌面端文件系统仓库。');
+			new Notice(t('batch.desktopOnly'));
 			return;
 		}
 
-		new Notice(`分析当前文档附件失败：${message}`, 10000);
+		new Notice(t('batch.analyzeFailed', { message }), 10000);
 		return;
 	}
 
 	if (plan.targets.length === 0) {
-		new Notice('当前文档中没有可上传到 Eagle 的本地附件引用。');
+		new Notice(t('batch.noLocalAttachments'));
 		return;
 	}
 
@@ -134,13 +135,13 @@ export async function uploadCurrentMarkdownAttachmentsToEagle(plugin: MyPlugin):
 		}
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		new Notice(`上传到 Eagle 失败，正文未修改，源附件未删除。失败原因：${message}`, 10000);
+		new Notice(t('batch.uploadFailed', { message }), 10000);
 		return;
 	}
 
 	const replacements = buildReplacementOperations(plan, resolvedLinks);
 	if (replacements.length === 0) {
-		new Notice('没有生成任何可替换的 Eagle 链接。');
+		new Notice(t('batch.noEagleLinks'));
 		return;
 	}
 
@@ -155,16 +156,16 @@ export async function uploadCurrentMarkdownAttachmentsToEagle(plugin: MyPlugin):
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (message === 'SOURCE_FILE_CHANGED') {
-			new Notice('当前文档在上传过程中已被修改。为避免替换错位，本次未写入回链，也未删除原附件。', 10000);
+			new Notice(t('batch.sourceFileChanged'), 10000);
 			return;
 		}
 
 		if (message === 'REPLACEMENT_MISMATCH') {
-			new Notice('文档中的附件位置与缓存分析不一致。为避免误删正文，本次已中止。', 10000);
+			new Notice(t('batch.replacementMismatch'), 10000);
 			return;
 		}
 
-		new Notice(`写入 Eagle 回链失败，原附件未删除。失败原因：${message}`, 10000);
+		new Notice(t('batch.writeFailed', { message }), 10000);
 		return;
 	}
 
@@ -210,7 +211,7 @@ export async function uploadCurrentMarkdownAttachmentsToEagle(plugin: MyPlugin):
 	};
 
 	if (deletionSkips.length > 0) {
-		new Notice(`有 ${deletionSkips.length} 个原附件未自动删除，已保留并打开详情窗口。`, 12000);
+		new Notice(t('batch.deletionSkipped', { count: deletionSkips.length }), 12000);
 		new AttachmentDeletionReportModal(plugin.app, buildDeletionReportText(activeFile, deletionSkips)).open();
 	}
 
@@ -571,36 +572,36 @@ function escapeMarkdownLabel(label: string): string {
 
 function buildCompletionMessage(stats: UploadExecutionStats): string {
 	const parts = [
-		`已替换 ${stats.replacedCount} 处附件引用`,
+		t('batch.stat.replaced', { count: stats.replacedCount }),
 	];
 
 	if (stats.uploadedCount > 0) {
-		parts.push(`上传 ${stats.uploadedCount} 个附件到 Eagle`);
+		parts.push(t('batch.stat.uploaded', { count: stats.uploadedCount }));
 	}
 
 	if (stats.reusedCount > 0) {
-		parts.push(`复用 ${stats.reusedCount} 个已在 Eagle 库中的附件`);
+		parts.push(t('batch.stat.reused', { count: stats.reusedCount }));
 	}
 
 	if (stats.deletedCount > 0) {
-		parts.push(`移入回收站 ${stats.deletedCount} 个原附件`);
+		parts.push(t('batch.stat.deleted', { count: stats.deletedCount }));
 	}
 
 	if (stats.skippedDeletionCount > 0) {
 		if (stats.retainedByReferenceCount > 0) {
-			parts.push(`${stats.retainedByReferenceCount} 个原附件因仍被其他文件引用而保留`);
+			parts.push(t('batch.stat.retainedByRef', { count: stats.retainedByReferenceCount }));
 		}
 
 		const otherRetainedCount = stats.skippedDeletionCount - stats.retainedByReferenceCount;
 		if (otherRetainedCount > 0) {
-			parts.push(`${otherRetainedCount} 个原附件因删除不安全而保留`);
+			parts.push(t('batch.stat.retainedOther', { count: otherRetainedCount }));
 		}
 
-		parts.push('已生成可复制提示');
+		parts.push(t('batch.stat.hintGenerated'));
 	}
 
 	if (stats.deletedCount === 0 && stats.skippedDeletionCount === 0) {
-		parts.push('未删除原附件');
+		parts.push(t('batch.stat.notDeleted'));
 	}
 
 	return `${parts.join('，')}。`;
@@ -608,39 +609,39 @@ function buildCompletionMessage(stats: UploadExecutionStats): string {
 
 function buildDeletionReportText(activeFile: TFile, skips: DeletionSkipInfo[]): string {
 	const lines = [
-		`当前文档：${activeFile.path}`,
-		'以下原附件未自动删除。',
-		'如果这些附件仍被其他文件引用，请继续保留；如果后续确认不再需要，可以根据下面的清单手动删除。',
+		t('batch.report.currentDoc', { path: activeFile.path }),
+		t('batch.report.notDeletedHeader'),
+		t('batch.report.notDeletedDesc'),
 		'',
 	];
 
 	for (const skip of skips) {
-		lines.push(`附件：${skip.sourceFile.path}`);
+		lines.push(t('batch.report.attachment', { path: skip.sourceFile.path }));
 
 		if (skip.sourceAlreadyInEagleLibrary) {
-			lines.push('原因：源文件已经位于 Eagle 库中，为避免误删 Eagle 原文件，已跳过自动删除。');
+			lines.push(t('batch.report.reasonInEagleLibrary'));
 		}
 
 		if (skip.remainingCurrentReferences > 0) {
-			lines.push(`原因：当前文档中仍有 ${skip.remainingCurrentReferences} 处未替换的内部引用，已跳过自动删除。`);
+			lines.push(t('batch.report.reasonCurrentRef', { count: skip.remainingCurrentReferences }));
 		}
 
 		if (skip.otherMarkdownReferences.length > 0) {
-			lines.push('未删除原因：该附件仍被以下 Markdown 文件引用。');
+			lines.push(t('batch.report.reasonOtherMd'));
 			for (const referenceFile of skip.otherMarkdownReferences) {
 				lines.push(`- ${referenceFile.path}`);
 			}
 		}
 
 		if (skip.otherCanvasReferences.length > 0) {
-			lines.push('未删除原因：该附件仍被以下 Canvas 文件引用。');
+			lines.push(t('batch.report.reasonOtherCanvas'));
 			for (const referenceFile of skip.otherCanvasReferences) {
 				lines.push(`- ${referenceFile.path}`);
 			}
 		}
 
 		if (skip.deletionError) {
-			lines.push(`自动删除失败：${skip.deletionError}`);
+			lines.push(t('batch.report.autoDeleteFailed', { message: skip.deletionError }));
 		}
 
 		lines.push('');
@@ -661,9 +662,9 @@ class AttachmentDeletionReportModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: '原附件未自动删除警告' });
+		contentEl.createEl('h2', { text: t('batch.report.title') });
 		contentEl.createEl('p', {
-			text: '这些附件已被保留。请先根据引用关系判断是继续保留还是后续手动删除。',
+			text: t('batch.report.desc'),
 		});
 
 		const reportEl = contentEl.createEl('textarea');
@@ -678,27 +679,27 @@ class AttachmentDeletionReportModal extends Modal {
 		new Setting(contentEl)
 			.addButton((button) => {
 				button
-					.setButtonText('复制提示')
+					.setButtonText(t('batch.report.copyHint'))
 					.setCta()
 					.onClick(() => {
 						void copyTextToClipboard(this.reportText).then((copied) => {
-							new Notice(copied ? '提示已复制。' : '复制失败，请手动复制。');
+							new Notice(copied ? t('batch.report.hintCopied') : t('batch.report.copyFailed'));
 						});
 					});
 			})
 			.addButton((button) => {
 				button
-					.setButtonText('复制并关闭')
+					.setButtonText(t('batch.report.copyAndClose'))
 					.onClick(() => {
 						void copyTextToClipboard(this.reportText).then((copied) => {
-							new Notice(copied ? '提示已复制。' : '复制失败，请手动复制。');
+							new Notice(copied ? t('batch.report.hintCopied') : t('batch.report.copyFailed'));
 							this.close();
 						});
 					});
 			})
 			.addButton((button) => {
 				button
-					.setButtonText('关闭')
+					.setButtonText(t('batch.report.close'))
 					.onClick(() => {
 						this.close();
 					});
@@ -721,7 +722,7 @@ async function copyTextToClipboard(text: string): Promise<boolean> {
 
 export async function uploadVaultMarkdownAttachmentsToEagle(plugin: MyPlugin): Promise<void> {
 	if (!(plugin.app.vault.adapter instanceof FileSystemAdapter)) {
-		new Notice('该命令仅支持桌面端文件系统仓库。');
+		new Notice(t('batch.desktopOnly'));
 		return;
 	}
 
@@ -749,7 +750,7 @@ export async function uploadVaultMarkdownAttachmentsToEagle(plugin: MyPlugin): P
 	}
 
 	if (allPlans.length === 0) {
-		new Notice('全库扫描完毕，未找到需要上传到 Eagle 的本地附件。');
+		new Notice(t('batch.vault.noAttachments'));
 		return;
 	}
 
@@ -760,7 +761,7 @@ export async function uploadVaultMarkdownAttachmentsToEagle(plugin: MyPlugin): P
 	});
 
 	if (!confirmed) {
-		new Notice('批量迁移已取消。');
+		new Notice(t('batch.vault.cancelled'));
 		return;
 	}
 
@@ -769,9 +770,9 @@ export async function uploadVaultMarkdownAttachmentsToEagle(plugin: MyPlugin): P
 	if (plugin.settings.migrateBackup) {
 		try {
 			backupDir = await backupAttachmentFiles(plugin, allPlans, adapterBasePath);
-			new Notice(`备份完成，备份目录：${backupDir}`, 8000);
+			new Notice(t('batch.vault.backupDone', { path: backupDir }), 8000);
 		} catch (error) {
-			new Notice(`备份失败，已中止迁移：${error instanceof Error ? error.message : String(error)}`, 10000);
+			new Notice(t('batch.vault.backupFailed', { message: error instanceof Error ? error.message : String(error) }), 10000);
 			return;
 		}
 	}
@@ -855,7 +856,13 @@ export async function uploadVaultMarkdownAttachmentsToEagle(plugin: MyPlugin): P
 	}
 
 	new Notice(
-		`迁移完成：处理 ${allPlans.length} 个文件，上传 ${totalUploaded} 个附件，替换 ${totalReplaced} 处引用，删除 ${totalDeleted} 个原文件${totalErrors > 0 ? `，${totalErrors} 个错误` : ''}。`,
+		t('batch.completed', {
+			fileCount: allPlans.length,
+			uploaded: totalUploaded,
+			replaced: totalReplaced,
+			deleted: totalDeleted,
+			errorSuffix: totalErrors > 0 ? t('batch.errorSuffix', { count: totalErrors }) : '',
+		}),
 		15000,
 	);
 }
@@ -918,17 +925,17 @@ class VaultMigrationConfirmModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl('h2', { text: '确认全库批量迁移' });
+		contentEl.createEl('h2', { text: t('batch.vault.confirm.title') });
 		contentEl.createEl('p', {
-			text: `将扫描 ${this.plans.length} 个包含本地附件的 Markdown 文件，共 ${this.totalCount} 个附件。`,
+			text: t('batch.vault.confirm.desc', { fileCount: this.plans.length, totalCount: this.totalCount }),
 		});
 
 		const fileList = contentEl.createEl('details');
-		fileList.createEl('summary', { text: `查看文件列表 (${this.plans.length} 个文件)` });
+		fileList.createEl('summary', { text: t('batch.vault.confirm.viewFiles', { count: this.plans.length }) });
 		const listEl = fileList.createEl('ul');
 		for (const { file, plan } of this.plans) {
 			const item = listEl.createEl('li');
-			item.textContent = `${file.path} (${plan.targets.length} 个附件)`;
+			item.textContent = t('batch.vault.confirm.fileItem', { path: file.path, count: plan.targets.length });
 		}
 
 		contentEl.createEl('hr');
@@ -936,7 +943,7 @@ class VaultMigrationConfirmModal extends Modal {
 		new Setting(contentEl)
 			.addButton((button) => {
 				button
-					.setButtonText('开始迁移')
+					.setButtonText(t('batch.vault.confirm.start'))
 					.setCta()
 					.onClick(() => {
 						this.close();
@@ -945,7 +952,7 @@ class VaultMigrationConfirmModal extends Modal {
 			})
 			.addButton((button) => {
 				button
-					.setButtonText('取消')
+					.setButtonText(t('batch.vault.confirm.cancel'))
 					.onClick(() => {
 						this.close();
 						this.resolve(false);
