@@ -1,4 +1,4 @@
-import { Editor, Notice } from 'obsidian';
+import { Editor, FileSystemAdapter, Notice } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -8,6 +8,7 @@ import type MyPlugin from './main';
 import { print } from './main';
 import { getEagleLibraryItemPath, isPathInsideDirectory } from './eaglePaths';
 import { getCurrentPageTags } from './synchronizedpagetabs';
+import { addMapping, copyEagleItemToVault, getMapping } from './eagleVaultSync';
 
 let electron: any = null;
 try {
@@ -332,6 +333,55 @@ export function createMarkdownLink(link: ResolvedEagleLink, imageSize: number | 
 	return `![${link.fileName}${sizeSuffix}](${mediaUrl})`;
 }
 
+function createVaultNativeLink(fileName: string, imageSize: number | undefined): string {
+	const ext = path.extname(fileName).toLowerCase();
+	const isImage = IMAGE_EXTENSIONS.has(ext);
+	const sizeSuffix = isImage && imageSize ? `|${imageSize}` : '';
+	return `![[${fileName}${sizeSuffix}]]`;
+}
+
+function extractEagleItemId(url: string): string | null {
+	const match = url.match(/images\/([^/]+)\.info/);
+	return match?.[1] ?? null;
+}
+
+async function copyFileToVaultAttachments(
+	plugin: MyPlugin,
+	sourceFilePath: string,
+): Promise<{ vaultPath: string; fileName: string } | null> {
+	const adapter = plugin.app.vault.adapter;
+	if (!(adapter instanceof FileSystemAdapter)) {
+		return null;
+	}
+
+	const attachmentDirName = plugin.settings.vaultAttachmentDir || 'attachments';
+	const vaultBasePath = adapter.getBasePath();
+	const targetDir = path.join(vaultBasePath, attachmentDirName);
+
+	if (!fs.existsSync(targetDir)) {
+		fs.mkdirSync(targetDir, { recursive: true });
+	}
+
+	const usedNames = new Set<string>();
+	for (const entry of fs.readdirSync(targetDir)) {
+		usedNames.add(entry.toLowerCase());
+	}
+
+	const preferredName = path.basename(sourceFilePath);
+	let targetFileName = preferredName;
+	let suffix = 2;
+	while (usedNames.has(targetFileName.toLowerCase())) {
+		const parsed = path.parse(preferredName);
+		targetFileName = `${parsed.name}-${suffix}${parsed.ext}`;
+		suffix += 1;
+	}
+
+	const targetPath = path.join(targetDir, targetFileName);
+	await fs.promises.copyFile(sourceFilePath, targetPath);
+
+	return { vaultPath: path.posix.join(attachmentDirName, targetFileName), fileName: targetFileName };
+}
+
 export async function getTransferFilePath(file: File): Promise<string> {
     let filePath = getNativeTransferFilePath(file);
     if (filePath) {
@@ -383,6 +433,45 @@ export async function resolveUrlToEagleLink(url: string, pluginInstance: MyPlugi
         isAudio: AUDIO_EXTENSIONS.has(ext),
         isVideo: VIDEO_EXTENSIONS.has(ext),
     };
+}
+
+/**
+ * Upload file to Eagle, copy to vault, record mapping, return Obsidian native link.
+ */
+async function uploadAndCreateVaultLink(
+    filePath: string,
+    pluginInstance: MyPlugin,
+): Promise<string> {
+    const libraryPath = pluginInstance.settings.libraryPath;
+    const isAlreadyInLibrary = libraryPath && isPathInsideDirectory(filePath, libraryPath);
+
+    let eagleUrl: string;
+    if (isAlreadyInLibrary) {
+        const link = buildLibraryLink(filePath, pluginInstance);
+        eagleUrl = link.url;
+    } else {
+        const link = await resolveFilePathToEagleLink(filePath, pluginInstance);
+        eagleUrl = link.url;
+    }
+
+    const itemId = extractEagleItemId(eagleUrl);
+    if (!itemId) {
+        throw new Error('NON_EAGLE_FILE');
+    }
+
+    const attachmentDir = pluginInstance.settings.vaultAttachmentDir || 'attachments';
+    const copied = await copyEagleItemToVault(pluginInstance, itemId, attachmentDir);
+    if (!copied) {
+        throw new Error('COPY_TO_VAULT_FAILED');
+    }
+
+    const ext = path.extname(copied.fileName).toLowerCase();
+    const isImage = IMAGE_EXTENSIONS.has(ext);
+    const sizeSuffix = isImage && pluginInstance.settings.imageSize ? `|${pluginInstance.settings.imageSize}` : '';
+    const linkText = `![[${copied.fileName}${sizeSuffix}]]`;
+
+    await addMapping(pluginInstance, itemId, copied.vaultPath, copied.fileName);
+    return linkText;
 }
 
 export async function handlePasteEvent(
@@ -441,8 +530,8 @@ export async function handlePasteEvent(
     }
 
     try {
-        const resolvedLink = await resolveFilePathToEagleLink(filePath, pluginInstance);
-        editor.replaceSelection(createMarkdownLink(resolvedLink, pluginInstance.settings.imageSize));
+        const vaultLink = await uploadAndCreateVaultLink(filePath, pluginInstance);
+        editor.replaceSelection(vaultLink);
         new Notice('Eagle link converted');
     } catch (error) {
         if (toErrorMessage(error) === 'NON_EAGLE_FILE') {
@@ -531,8 +620,8 @@ export async function handleDropEvent(
             const filePath = await getTransferFilePath(file);
             print(`Drag file path: ${filePath}`);
 
-            const resolvedLink = await resolveFilePathToEagleLink(filePath, pluginInstance);
-            editor.replaceSelection(createMarkdownLink(resolvedLink, pluginInstance.settings.imageSize));
+            const vaultLink = await uploadAndCreateVaultLink(filePath, pluginInstance);
+            editor.replaceSelection(vaultLink);
             new Notice('Eagle link converted');
         } catch (error) {
             if (toErrorMessage(error) === 'NON_EAGLE_FILE') {

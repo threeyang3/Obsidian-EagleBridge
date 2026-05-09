@@ -40,6 +40,8 @@ export interface MyPluginSettings {
 	migrateWaitImportSeconds: number;
 	migrateKeepTemp: boolean;
 	eagleDownloadDir: string;
+	vaultAttachmentDir: string;
+	autoSyncEagleToVault: boolean;
 }
 
 export const DEFAULT_UPLOAD_SETTINGS: EagleUploadSettings = {
@@ -76,6 +78,8 @@ export const DEFAULT_SETTINGS: MyPluginSettings = {
 	migrateKeepTemp: false,
 	lanIpAddress: '',
 	eagleDownloadDir: '',
+	vaultAttachmentDir: 'attachments',
+	autoSyncEagleToVault: true,
 }
 
 type LegacyUploadSettings = Partial<EagleUploadSettings> & {
@@ -554,6 +558,31 @@ export class SampleSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.style.width = '100%';
+			});
+
+		new Setting(migrationPanel)
+			.setName(t('settings.vaultAttachmentDir.name'))
+			.setDesc(t('settings.vaultAttachmentDir.desc'))
+			.addText((text) => {
+				text
+					.setPlaceholder(t('settings.vaultAttachmentDir.placeholder'))
+					.setValue(this.plugin.settings.vaultAttachmentDir)
+					.onChange(async (value) => {
+						this.plugin.settings.vaultAttachmentDir = value.trim() || 'attachments';
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.width = '100%';
+			});
+
+		new Setting(migrationPanel)
+			.setName(t('settings.autoSyncEagleToVault.name'))
+			.setDesc(t('settings.autoSyncEagleToVault.desc'))
+			.addToggle((toggle) => {
+				toggle.setValue(this.plugin.settings.autoSyncEagleToVault)
+					.onChange(async (value) => {
+						this.plugin.settings.autoSyncEagleToVault = value;
+						await this.plugin.saveSettings();
+					});
 			});
 
 	}

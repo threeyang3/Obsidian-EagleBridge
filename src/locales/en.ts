@@ -85,6 +85,11 @@ const en = {
 	'settings.downloadDir.name': 'Eagle download directory',
 	'settings.downloadDir.desc': 'Default directory for downloading Eagle attachments back to local. Leave empty to use the vault\'s attachment/ folder.',
 	'settings.downloadDir.placeholder': 'e.g. attachments',
+	'settings.vaultAttachmentDir.name': 'Vault attachment directory',
+	'settings.vaultAttachmentDir.desc': 'Directory inside the vault where attachment copies are stored (relative to vault root). Used in vault-primary storage mode.',
+	'settings.vaultAttachmentDir.placeholder': 'attachments',
+	'settings.autoSyncEagleToVault.name': 'Auto-sync Eagle to vault',
+	'settings.autoSyncEagleToVault.desc': 'Automatically update vault copies when Eagle files are modified (one-way: Eagle → vault).',
 
 	// main.ts
 	'main.ribbonIcon': 'Open Eagle reference view',
@@ -333,6 +338,12 @@ const en = {
 	'download.completed': 'Download complete: replaced {{replaced}} link(s), skipped {{skipped}} item(s).',
 	'download.completedVault': 'Download complete: processed {{fileCount}} file(s), replaced {{replaced}} link(s), skipped {{skipped}} item(s).',
 	'download.nothingReplaced': 'No links were replaced. All Eagle items may be external URLs or unresolvable.',
+
+	// eagleVaultSync.ts
+	'sync.started': 'Eagle → vault sync started.',
+	'sync.completed': 'Eagle → vault sync complete: checked {{checked}}, updated {{updated}}, errors {{errors}}.',
+	'sync.noVaultDir': 'Vault attachment directory does not exist: {{dir}}',
+	'sync.copyFailed': 'Failed to copy Eagle item to vault: {{message}}',
 };
 
 export default en;

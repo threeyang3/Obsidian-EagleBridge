@@ -25,6 +25,7 @@ import { registerCanvasAutoNormalize, registerCanvasDocument } from './canvasHan
 import { FileTagSyncState, getFileTagSyncState, mergeItemTagsIntoFileFrontmatter, syncTagsToItemIds } from './synchronizedpagetabs';
 import { syncObsidianLinkForFile } from './obsidianLinkSync';
 import { registerMarkdownExportFileMenu } from './exportMarkdown';
+import { initMapping, startWatchingEagleLibrary, stopWatchingEagleLibrary } from './eagleVaultSync';
 import { EagleReferenceIndex, EagleReferenceView, EAGLE_REFERENCE_VIEW_TYPE, activateEagleReferenceView } from './eagleReferenceView';
 import { t } from './i18n';
 
@@ -105,6 +106,9 @@ export default class MyPlugin extends Plugin {
 		if (Platform.isDesktopApp) {
 			startServer(this.settings.libraryPath, this.settings.port);
 			registerCanvasAutoNormalize(this);
+			void initMapping(this).then(() => {
+				startWatchingEagleLibrary(this);
+			});
 		}
 		if (!Platform.isDesktopApp && this.settings.lanIpAddress) {
 			this.registerMarkdownPostProcessor((el, ctx) => {
@@ -352,6 +356,7 @@ export default class MyPlugin extends Plugin {
 	onunload() {
 		// 在插件卸载时停止服务器
 		stopServer();
+		stopWatchingEagleLibrary();
 		this.clearAllAutoTagSyncTimers();
 		// this.app.vault.getResourcePath = this.originalGetResourcePath;
 		// this.app.metadataCache.getFirstLinkpathDest = this.originalGetFirstLinkpathDest;

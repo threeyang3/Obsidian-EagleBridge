@@ -87,6 +87,11 @@ const zh: typeof en = {
 	'settings.downloadDir.name': 'Eagle 下载目录',
 	'settings.downloadDir.desc': '将 Eagle 附件下载回本地时的默认保存目录。留空则使用仓库根目录下的 attachment/ 文件夹。',
 	'settings.downloadDir.placeholder': '如 attachments',
+	'settings.vaultAttachmentDir.name': 'Vault 附件目录',
+	'settings.vaultAttachmentDir.desc': 'vault 内存放附件副本的目录（相对于 vault 根目录）。用于 vault 主存储模式。',
+	'settings.vaultAttachmentDir.placeholder': 'attachments',
+	'settings.autoSyncEagleToVault.name': '自动同步 Eagle 到 vault',
+	'settings.autoSyncEagleToVault.desc': '当 Eagle 中的文件被修改时，自动更新 vault 中的副本（单向：Eagle → vault）。',
 
 	// main.ts
 	'main.ribbonIcon': '打开 Eagle 引用视图',
@@ -335,6 +340,12 @@ const zh: typeof en = {
 	'download.completed': '下载完成：已替换 {{replaced}} 个链接，跳过 {{skipped}} 个项目。',
 	'download.completedVault': '下载完成：处理 {{fileCount}} 个文件，已替换 {{replaced}} 个链接，跳过 {{skipped}} 个项目。',
 	'download.nothingReplaced': '没有替换任何链接。所有 Eagle 项目可能是外部 URL 或无法解析。',
+
+	// eagleVaultSync.ts
+	'sync.started': 'Eagle → vault 同步已开始。',
+	'sync.completed': 'Eagle → vault 同步完成：检查 {{checked}} 个，更新 {{updated}} 个，错误 {{errors}} 个。',
+	'sync.noVaultDir': 'Vault 附件目录不存在：{{dir}}',
+	'sync.copyFailed': '复制 Eagle 项目到 vault 失败：{{message}}',
 };
 
 export default zh;
