@@ -48,7 +48,11 @@ Obsidian plugin that integrates with Eagle (digital asset manager). Communicatio
 | `exportMarkdown.ts` | Exports a .md file with all Eagle attachment links replaced by relative paths, bundled as folder or ZIP. |
 | `markdownAttachmentBatchUpload.ts` | Scans the current file (or all markdown files for vault-wide mode) for local file references, uploads to Eagle, replaces links, and optionally deletes originals. Supports backup and configurable delay. |
 | `canvasHandler.ts` | Canvas integration — paste/drop file handling, auto-normalize Eagle node sizes, embed URLs. |
-| `addCommand-config.ts` | Registers plugin commands: tag sync, Obsidian link sync, current-file batch upload, vault-wide batch upload. |
+| `eagleAttachmentDownload.ts` | Downloads Eagle-linked attachments back to a local directory and replaces Eagle localhost links with relative paths. Supports current-file and vault-wide modes. |
+| `i18n.ts` | Internationalization module. Detects Obsidian UI locale via `window.localStorage.getItem('language')` and exports `t(key, params?)` for string lookup with `{{variable}}` interpolation. |
+| `locales/en.ts` | English translation map (~250 keys). |
+| `locales/zh.ts` | Chinese translation map (~250 keys). |
+| `addCommand-config.ts` | Registers plugin commands: tag sync, Obsidian link sync, current-file batch upload, vault-wide batch upload, current-file download, vault-wide download. |
 | `onElement.ts` | Utility — register event listener on a selector, returns a deregistration function. |
 
 ### Key Patterns
@@ -59,6 +63,8 @@ Obsidian plugin that integrates with Eagle (digital asset manager). Communicatio
 - **Media embedding**: Audio/video Eagle links are rendered as native `<audio>`/`<video>` elements (not iframes), detected via `?eb_ext=` URL parameter. Other non-image files (PDF, websites) use iframes.
 - **Mobile compatibility**: All Electron/Node.js dependencies are guarded with `Platform.isDesktopApp` or try/catch. On mobile, localhost URLs are rewritten to LAN IP for server access.
 - **Vault-wide batch migration**: `uploadVaultMarkdownAttachmentsToEagle()` scans all markdown files, shows confirmation modal, supports backup to `.eaglebridge-backup/`, and respects per-setting delete/backup/delay/temp options.
+- **Eagle attachment download**: `downloadCurrentFileEagleAttachments()` / `downloadVaultEagleAttachments()` in `eagleAttachmentDownload.ts` — reverse of batch upload. Copies Eagle library files to a local directory and rewrites localhost links to relative paths. Reuses `resolveEagleItem` and `collectMarkdownLinkMatches` from `exportMarkdown.ts`.
+- **i18n**: All user-facing strings go through `t('key', { param })`. Translation keys are in `src/locales/en.ts` and `src/locales/zh.ts`. New strings must be added to both files.
 - **Settings**: Flat `MyPluginSettings` interface with migration helpers (`normalizeAttachmentTagSyncMode`, `normalizeUploadSettings`) for backward compatibility.
 - **Path safety**: All file serving validates paths are inside the Eagle library `images/` directory (`isPathInsideDirectory`).
 

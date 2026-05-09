@@ -18,6 +18,9 @@ This plugin includes the following functionalities:
 - **Audio/Video inline playback**: Eagle-linked media files play directly in Obsidian via native `<audio>`/`<video>` elements
 - **Mobile LAN viewing**: View Eagle-linked images and attachments from mobile Obsidian on the same LAN
 - **Vault-wide batch migration**: Upload all local attachments across the vault to Eagle, with backup, confirmation modal, and configurable options
+- **Export Markdown with Eagle attachments**: Export a .md file with Eagle localhost links rewritten to relative attachment paths, bundled as folder or ZIP
+- **Download Eagle attachments to local**: Reverse of batch upload — download Eagle-linked attachments to a local directory and replace localhost links with relative paths (current file or vault-wide)
+- **i18n**: UI automatically switches between English and Chinese based on Obsidian's language setting
 
 [![GitHub stars](https://img.shields.io/github/stars/zyjGraphein/Obsidian-EagleBridge?style=flat&label=Stars)](https://github.com/zyjGraphein/Obsidian-EagleBridge/stargazers)
 [![Total Downloads](https://img.shields.io/github/downloads/zyjGraphein/Obsidian-EagleBridge/total?style=flat&label=Total%20Downloads)](https://github.com/zyjGraphein/Obsidian-EagleBridge/releases)
@@ -92,6 +95,23 @@ Upload all local attachments (images, audio, video, PDFs) from every Markdown fi
 3. Review the confirmation modal showing file count and attachment count
 4. Confirm to start. A notice shows final stats (uploaded, replaced, deleted, errors)
 
+### Download Eagle Attachments to Local
+
+Reverse of batch migration — download Eagle-linked attachments back to a local directory and replace localhost links with relative paths:
+
+1. Go to plugin Settings → **Batch migration** → set **Eagle download directory** (default: `attachment/` in vault root)
+2. Run command: **Download Eagle attachments to local (current file)** or **Download Eagle attachments to local (vault-wide)**
+3. Choose the download directory in the popup (overrides the default)
+4. Confirm to start. Attachments are copied from Eagle library and links are rewritten to relative paths
+
+### Export Markdown with Eagle Attachments
+
+Export a Markdown file with all Eagle localhost links replaced by relative attachment paths:
+
+1. Right-click a `.md` file in the file explorer → **Export Markdown with Eagle attachments**
+2. Choose format (Folder or ZIP) and destination path
+3. Click Export. The package contains the rewritten `.md` and an `attachment/` folder with all Eagle files
+
 ## Development Guide
 
 This plugin follows the structure of the [Obsidian Sample Plugin](https://github.com/obsidianmd/obsidian-sample-plugin). More details can be found there.
@@ -109,9 +129,11 @@ This plugin follows the structure of the [Obsidian Sample Plugin](https://github
 - [x] Inline audio/video playback for Eagle links
 - [x] Mobile LAN viewing support
 - [x] Vault-wide batch migration with backup
+- [x] Export Markdown with Eagle attachments (folder/ZIP)
+- [x] Download Eagle attachments back to local
+- [x] i18n support (English / Chinese)
 - [ ] Add support for macOS.
 - [ ] Support updating position when dragging.
-- [ ] When exporting, replace all attachment links and export all attachments to a folder.
 
 ## Known Limitations
 
