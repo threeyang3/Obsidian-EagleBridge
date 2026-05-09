@@ -39,6 +39,7 @@ export interface MyPluginSettings {
 	migrateBackup: boolean;
 	migrateWaitImportSeconds: number;
 	migrateKeepTemp: boolean;
+	eagleDownloadDir: string;
 }
 
 export const DEFAULT_UPLOAD_SETTINGS: EagleUploadSettings = {
@@ -74,6 +75,7 @@ export const DEFAULT_SETTINGS: MyPluginSettings = {
 	migrateWaitImportSeconds: 2,
 	migrateKeepTemp: false,
 	lanIpAddress: '',
+	eagleDownloadDir: '',
 }
 
 type LegacyUploadSettings = Partial<EagleUploadSettings> & {
@@ -539,6 +541,20 @@ export class SampleSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-			
+
+		new Setting(migrationPanel)
+			.setName(t('settings.downloadDir.name'))
+			.setDesc(t('settings.downloadDir.desc'))
+			.addText((text) => {
+				text
+					.setPlaceholder(t('settings.downloadDir.placeholder'))
+					.setValue(this.plugin.settings.eagleDownloadDir)
+					.onChange(async (value) => {
+						this.plugin.settings.eagleDownloadDir = value.trim();
+						await this.plugin.saveSettings();
+					});
+				text.inputEl.style.width = '100%';
+			});
+
 	}
 }

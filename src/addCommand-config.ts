@@ -2,6 +2,7 @@ import MyPlugin from './main';
 import { syncCurrentPageTags } from "./synchronizedpagetabs";
 import { syncCurrentPageObsidianLinkToEagle } from './obsidianLinkSync';
 import { uploadCurrentMarkdownAttachmentsToEagle, uploadVaultMarkdownAttachmentsToEagle } from './markdownAttachmentBatchUpload';
+import { downloadCurrentFileEagleAttachments, downloadVaultEagleAttachments } from './eagleAttachmentDownload';
 import { t } from './i18n';
 
 export const addCommandSynchronizedPageTabs = (myPlugin: MyPlugin) => {
@@ -49,6 +50,36 @@ export const addCommandUploadVaultMarkdownAttachments = (myPlugin: MyPlugin) => 
 		name: t('cmd.uploadVault'),
 		callback: async () => {
 			await uploadVaultMarkdownAttachmentsToEagle(myPlugin);
+		},
+	});
+};
+
+export const addCommandDownloadCurrentFileEagleAttachments = (myPlugin: MyPlugin) => {
+	myPlugin.addCommand({
+		id: 'download-current-file-eagle-attachments',
+		name: t('cmd.downloadCurrent'),
+		checkCallback: (checking: boolean) => {
+			const activeFile = myPlugin.app.workspace.getActiveFile();
+			const canRun = activeFile?.extension === 'md';
+			if (!canRun) {
+				return false;
+			}
+
+			if (!checking) {
+				void downloadCurrentFileEagleAttachments(myPlugin);
+			}
+
+			return true;
+		},
+	});
+};
+
+export const addCommandDownloadVaultEagleAttachments = (myPlugin: MyPlugin) => {
+	myPlugin.addCommand({
+		id: 'download-vault-eagle-attachments',
+		name: t('cmd.downloadVault'),
+		callback: async () => {
+			await downloadVaultEagleAttachments(myPlugin);
 		},
 	});
 };

@@ -82,6 +82,9 @@ const en = {
 	'settings.migration.waitTime.desc': 'Delay in seconds between each Eagle import to avoid overwhelming the API.',
 	'settings.migration.keepTemp.name': 'Keep temporary upload files',
 	'settings.migration.keepTemp.desc': 'When enabled, temporary copies of files used for Eagle upload are not cleaned up.',
+	'settings.downloadDir.name': 'Eagle download directory',
+	'settings.downloadDir.desc': 'Default directory for downloading Eagle attachments back to local. Leave empty to use the vault\'s attachment/ folder.',
+	'settings.downloadDir.placeholder': 'e.g. attachments',
 
 	// main.ts
 	'main.ribbonIcon': 'Open Eagle reference view',
@@ -94,6 +97,8 @@ const en = {
 	'cmd.syncObsidianLink': 'Send current page Obsidian link to Eagle',
 	'cmd.uploadCurrent': 'Upload current Markdown attachments to Eagle',
 	'cmd.uploadVault': 'Upload all Markdown attachments to Eagle',
+	'cmd.downloadCurrent': 'Download Eagle attachments to local (current file)',
+	'cmd.downloadVault': 'Download Eagle attachments to local (vault-wide)',
 
 	// menucall.ts
 	'menu.openInObsidian': 'Open in obsidian',
@@ -310,6 +315,24 @@ const en = {
 	'obsidianLink.noEagleItems': 'No Eagle items found in the current page.',
 	'obsidianLink.sent': 'Sent current page link to {{count}} Eagle item(s).',
 	'obsidianLink.alreadySent': 'Current page link is already present in Eagle.',
+
+	// eagleAttachmentDownload.ts
+	'download.noEagleLinks': 'No Eagle attachment links found in the current file.',
+	'download.noEagleLinksVault': 'No Eagle attachment links found in any Markdown file.',
+	'download.title': 'Download Eagle attachments to local',
+	'download.descCurrent': 'Current file: {{file}}. Found {{count}} Eagle link(s).',
+	'download.descVault': 'Scanned {{fileCount}} Markdown file(s), found {{linkCount}} Eagle link(s).',
+	'download.dir.name': 'Download directory',
+	'download.dir.desc': 'Directory to save downloaded attachments. Relative paths are resolved from the vault root.',
+	'download.dir.placeholder': 'e.g. attachments',
+	'download.dir.browse': 'Browse directory',
+	'download.dir.browseUnavailable': 'Native directory picker unavailable, enter path manually',
+	'download.dir.browseTitle': 'Choose download directory',
+	'download.start': 'Start download',
+	'download.cancel': 'Cancel',
+	'download.completed': 'Download complete: replaced {{replaced}} link(s), skipped {{skipped}} item(s).',
+	'download.completedVault': 'Download complete: processed {{fileCount}} file(s), replaced {{replaced}} link(s), skipped {{skipped}} item(s).',
+	'download.nothingReplaced': 'No links were replaced. All Eagle items may be external URLs or unresolvable.',
 };
 
 export default en;

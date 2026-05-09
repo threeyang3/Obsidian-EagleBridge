@@ -9,6 +9,8 @@ import {
 	addCommandSyncCurrentPageObsidianLink,
 	addCommandUploadCurrentMarkdownAttachments,
 	addCommandUploadVaultMarkdownAttachments,
+	addCommandDownloadCurrentFileEagleAttachments,
+	addCommandDownloadVaultEagleAttachments,
 } from "./addCommand-config";
 import { existsSync } from 'fs';
 import { MyPluginSettings, DEFAULT_SETTINGS, SampleSettingTab, isAppendPageTagsMode, isImportEagleTagsMode, normalizeAttachmentTagSyncMode, normalizeUploadSettings, shouldReplacePageTagsInEagle } from './setting';
@@ -283,6 +285,8 @@ export default class MyPlugin extends Plugin {
 			addCommandSyncCurrentPageObsidianLink(this);
 			addCommandUploadCurrentMarkdownAttachments(this);
 			addCommandUploadVaultMarkdownAttachments(this);
+			addCommandDownloadCurrentFileEagleAttachments(this);
+			addCommandDownloadVaultEagleAttachments(this);
 			registerMarkdownExportFileMenu(this);
 		}
 		// 添加自定义样式，确保样式包含编辑模式特定样式

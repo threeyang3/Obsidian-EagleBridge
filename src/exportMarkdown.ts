@@ -11,11 +11,11 @@ import { t } from './i18n';
 const execFileAsync = promisify(execFile);
 const EAGLE_MARKDOWN_LINK_REGEX = /(!?)\[([^\]]*)\]\((http:\/\/localhost:\d+\/images\/([^)\/\s]+)\.info)([^)]*)\)/g;
 const DEFAULT_EXPORT_SUFFIX = '-export';
-const ATTACHMENT_DIR_NAME = 'attachment';
+export const ATTACHMENT_DIR_NAME = 'attachment';
 const POWER_SHELL_COMMAND = process.platform === 'win32' ? 'powershell.exe' : 'powershell';
 const electron = require('electron');
 
-interface EagleMarkdownLinkMatch {
+export interface EagleMarkdownLinkMatch {
 	fullMatch: string;
 	index: number;
 	length: number;
@@ -25,7 +25,7 @@ interface EagleMarkdownLinkMatch {
 	suffix: string;
 }
 
-interface ResolvedEagleItem {
+export interface ResolvedEagleItem {
 	itemId: string;
 	exportBaseName: string;
 	sourceFilePath?: string;
@@ -390,7 +390,7 @@ async function prepareMarkdownExport(plugin: MyPlugin, file: TFile): Promise<Pre
 	};
 }
 
-function collectMarkdownLinkMatches(content: string): EagleMarkdownLinkMatch[] {
+export function collectMarkdownLinkMatches(content: string): EagleMarkdownLinkMatch[] {
 	const matches: EagleMarkdownLinkMatch[] = [];
 	let match: RegExpExecArray | null;
 
@@ -410,7 +410,7 @@ function collectMarkdownLinkMatches(content: string): EagleMarkdownLinkMatch[] {
 	return matches;
 }
 
-async function resolveEagleItem(itemId: string, libraryPath: string): Promise<ResolvedEagleItem | null> {
+export async function resolveEagleItem(itemId: string, libraryPath: string): Promise<ResolvedEagleItem | null> {
 	const infoDirPath = path.join(path.resolve(libraryPath), 'images', `${itemId}.info`);
 	const metadataPath = path.join(infoDirPath, 'metadata.json');
 
@@ -611,7 +611,7 @@ function buildExportRootName(file: TFile): string {
 	return `${baseName}${DEFAULT_EXPORT_SUFFIX}`;
 }
 
-function allocateUniqueFileName(preferredFileName: string, usedFileNames: Set<string>): string {
+export function allocateUniqueFileName(preferredFileName: string, usedFileNames: Set<string>): string {
 	const safeFileName = sanitizeFileName(preferredFileName) || 'attachment';
 	const parsedFileName = path.parse(safeFileName);
 	const normalizedBaseName = parsedFileName.name || 'attachment';
@@ -628,7 +628,7 @@ function allocateUniqueFileName(preferredFileName: string, usedFileNames: Set<st
 	return candidate;
 }
 
-function sanitizeFileName(fileName: string): string {
+export function sanitizeFileName(fileName: string): string {
 	const parsedFileName = path.parse(fileName);
 	const safeName = sanitizePathSegment(parsedFileName.name) || 'file';
 	const safeExtension = sanitizePathSegment(parsedFileName.ext.replace(/^\./, ''));
@@ -643,7 +643,7 @@ function sanitizePathSegment(value: string): string {
 		.replace(/[. ]+$/g, '');
 }
 
-function formatMarkdownDestination(relativePath: string): string {
+export function formatMarkdownDestination(relativePath: string): string {
 	return /[\s()]/.test(relativePath) ? `<${relativePath}>` : relativePath;
 }
 

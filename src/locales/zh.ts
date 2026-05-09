@@ -84,6 +84,9 @@ const zh: typeof en = {
 	'settings.migration.waitTime.desc': '每次 Eagle 导入之间的延迟秒数，避免 API 过载。',
 	'settings.migration.keepTemp.name': '保留临时上传文件',
 	'settings.migration.keepTemp.desc': '开启后，用于 Eagle 上传的临时文件副本不会被清理。',
+	'settings.downloadDir.name': 'Eagle 下载目录',
+	'settings.downloadDir.desc': '将 Eagle 附件下载回本地时的默认保存目录。留空则使用仓库根目录下的 attachment/ 文件夹。',
+	'settings.downloadDir.placeholder': '如 attachments',
 
 	// main.ts
 	'main.ribbonIcon': '打开 Eagle 引用视图',
@@ -96,6 +99,8 @@ const zh: typeof en = {
 	'cmd.syncObsidianLink': '发送当前页面 Obsidian 链接到 Eagle',
 	'cmd.uploadCurrent': '上传当前 Markdown 附件到 Eagle',
 	'cmd.uploadVault': '上传所有 Markdown 附件到 Eagle',
+	'cmd.downloadCurrent': '下载 Eagle 附件到本地（当前文件）',
+	'cmd.downloadVault': '下载 Eagle 附件到本地（全库）',
 
 	// menucall.ts
 	'menu.openInObsidian': '在 Obsidian 中打开',
@@ -312,6 +317,24 @@ const zh: typeof en = {
 	'obsidianLink.noEagleItems': '当前页面中没有找到 Eagle 条目。',
 	'obsidianLink.sent': '已将当前页面链接发送到 {{count}} 个 Eagle 条目。',
 	'obsidianLink.alreadySent': '当前页面链接已存在于 Eagle 中。',
+
+	// eagleAttachmentDownload.ts
+	'download.noEagleLinks': '当前文件中没有找到 Eagle 附件链接。',
+	'download.noEagleLinksVault': '所有 Markdown 文件中均未找到 Eagle 附件链接。',
+	'download.title': '下载 Eagle 附件到本地',
+	'download.descCurrent': '当前文件：{{file}}。找到 {{count}} 个 Eagle 链接。',
+	'download.descVault': '已扫描 {{fileCount}} 个 Markdown 文件，找到 {{linkCount}} 个 Eagle 链接。',
+	'download.dir.name': '下载目录',
+	'download.dir.desc': '保存下载附件的目录。相对路径基于仓库根目录解析。',
+	'download.dir.placeholder': '如 attachments',
+	'download.dir.browse': '浏览目录',
+	'download.dir.browseUnavailable': '原生目录选择器不可用，请手动输入路径',
+	'download.dir.browseTitle': '选择下载目录',
+	'download.start': '开始下载',
+	'download.cancel': '取消',
+	'download.completed': '下载完成：已替换 {{replaced}} 个链接，跳过 {{skipped}} 个项目。',
+	'download.completedVault': '下载完成：处理 {{fileCount}} 个文件，已替换 {{replaced}} 个链接，跳过 {{skipped}} 个项目。',
+	'download.nothingReplaced': '没有替换任何链接。所有 Eagle 项目可能是外部 URL 或无法解析。',
 };
 
 export default zh;
